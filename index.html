@@ -124,7 +124,6 @@
                     <div class="flex justify-between items-center">
                         <h2 class="text-xs font-bold text-red-400 uppercase">Scan Barcode Keluar</h2>
                         <div class="flex gap-2 items-center">
-                            <!-- Tombol lampu dibuat selalu tampil begitu kamera dinyalakan -->
                             <button onclick="toggleFlashlight()" id="btnFlash" class="text-xs text-yellow-400 font-semibold underline hidden">💡 Lampu</button>
                             <button onclick="stopCamera()" id="btnStopCam" class="text-xs text-gray-400 underline hidden">Matikan</button>
                         </div>
@@ -159,7 +158,7 @@
         </div>
     </div>
 
-    <!-- MODAL PRATINJAU STRUK (RE-PRINT) -->
+    <!-- MODAL PRATINJAU STRUK -->
     <div id="modalPreviewStruk" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 w-full max-w-xs space-y-4">
             <div class="flex justify-between items-center border-b border-gray-700 pb-2">
@@ -184,13 +183,13 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyCO1YU38reGXb5bemDOLZr2Wb5HDAEtJvg",
-            authDomain: "parkir-7f014.firebaseapp.com",
-            databaseURL: "https://parkir-7f014-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "parkir-7f014",
-            storageBucket: "parkir-7f014.firebasestorage.app",
-            messagingSenderId: "786928419095",
-            appId: "1:786928419095:web:a60e4c62fc53b6ec43b752"
+            apiKey: "AIzaSyBeZHulUbNtJnjr-gazpG9Hlq8JdldDuYA",
+            authDomain: "parkir-bcf4b.firebaseapp.com",
+            databaseURL: "https://parkir-bcf4b-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "parkir-bcf4b",
+            storageBucket: "parkir-bcf4b.firebasestorage.app",
+            messagingSenderId: "593264421018",
+            appId: "1:593264421018:web:089a62cb21831a99799723"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -561,8 +560,6 @@
             ).then(() => {
                 document.getElementById('btnStartCam').classList.add('hidden');
                 document.getElementById('btnStopCam').classList.remove('hidden');
-                
-                // Tombol lampu langsung dipaksa tampil agar bisa diklik tanpa menunggu sensor terbaca
                 document.getElementById('btnFlash').classList.remove('hidden');
             }).catch(err => {
                 alert("Gagal membuka kamera: " + err);
