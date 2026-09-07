@@ -220,7 +220,13 @@
 
         let currentSesi = localStorage.getItem('parkir_active_sesi') || null;
         let dataMasuk = [];
-        let dbPasswords = {};
+        let dbPasswords = {
+            "parkir1": "123",
+            "parkir2": "123",
+            "parkir3": "123",
+            "parkir4": "123",
+            "superadmin": "admin123"
+        };
         let bluetoothDevice = null, bluetoothCharacteristic = null;
         let selectedKeluarId = null;
         let html5QrCode = null;
@@ -241,8 +247,14 @@
             }
         }, 3000);
 
+        // Ambil data password dari Firebase secara real-time
         database.ref('settings/passwords').on('value', (snapshot) => {
-            if (snapshot.exists()) dbPasswords = snapshot.val();
+            if (snapshot.exists()) {
+                dbPasswords = snapshot.val();
+            } else {
+                // Inisialisasi default ke firebase jika belum ada
+                database.ref('settings/passwords').set(dbPasswords);
+            }
         });
 
         function initRealtimeDataListener() {
@@ -280,8 +292,14 @@
         function prosesLogin() {
             let sesi = document.getElementById('loginSesi').value;
             let pass = document.getElementById('loginPassword').value;
-            let actualPass = dbPasswords[sesi] || (sesi === 'superadmin' ? 'admin123' : '123');
-            if (pass !== actualPass && pass !== "admin123") return alert("Password salah!");
+            
+            // Validasi ketat berdasarkan database password yang aktif
+            let correctPass = dbPasswords[sesi] || (sesi === 'superadmin' ? 'admin123' : '123');
+            
+            if (pass !== correctPass) {
+                return alert("Password salah!");
+            }
+
             currentSesi = sesi;
             localStorage.setItem('parkir_active_sesi', sesi);
             bukaAplikasi(sesi);
