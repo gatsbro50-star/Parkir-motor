@@ -3,656 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panitia Parkir Karnaval - C58</title>
+    <title>Sistem Manajemen Parkir - Junior Cell</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    
-    <!-- FIREBASE SDK (Compat Version) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans p-4 max-w-md mx-auto min-h-screen flex flex-col justify-between">
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
 
-    <!-- HALAMAN LOGIN -->
-    <div id="pageLogin" class="flex flex-col justify-center items-center min-h-[80vh] space-y-6">
-        <div class="text-center space-y-2">
-            <h1 class="text-2xl font-extrabold text-blue-400 tracking-wider">🎪 PARKIR KARNAVAL</h1>
-            <p class="text-xs text-gray-400">Silakan pilih pos parkir atau login sebagai admin</p>
-        </div>
-
-        <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 w-full space-y-4 shadow-xl">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Pilih Sesi / Pos Parkir</label>
-                <select id="loginSesi" class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base font-semibold text-white focus:outline-none focus:border-blue-500">
-                    <option value="parkir1">Pos Parkir 1</option>
-                    <option value="parkir2">Pos Parkir 2</option>
-                    <option value="parkir3">Pos Parkir 3</option>
-                    <option value="parkir4">Pos Parkir 4</option>
-                    <option value="superadmin">👑 Super Admin (All Parkir)</option>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    🚗 Parkir System <span class="text-xs bg-blue-500 px-2 py-1 rounded">Real-Time</span>
+                </h1>
+                <p class="text-blue-100 text-sm">Junior Cell Parking Management</p>
+            </div>
+            <div class="flex items-center gap-3 bg-blue-700 px-4 py-2 rounded-lg shadow-inner">
+                <span class="text-sm text-blue-200">Login Sebagai:</span>
+                <select id="userRoleSelect" onchange="changeUserRole()" class="bg-white text-gray-800 font-semibold px-3 py-1 rounded shadow focus:outline-none">
+                    <option value="Pos Parkir 1">Pos Parkir 1</option>
+                    <option value="Pos Parkir 2">Pos Parkir 2</option>
+                    <option value="Pos Parkir 3">Pos Parkir 3</option>
+                    <option value="Pos Parkir 4">Pos Parkir 4</option>
+                    <option value="Super Admin">Super Admin</option>
                 </select>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Password Akses</label>
-                <input type="password" id="loginPassword" placeholder="Masukkan password..." 
-                       class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base text-white focus:outline-none focus:border-blue-500">
-            </div>
-            <button onclick="prosesLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl py-3.5 shadow-lg transition active:scale-95">
-                Masuk Sistem
-            </button>
         </div>
-    </div>
+    </header>
 
-    <!-- HALAMAN UTAMA APLIKASI -->
-    <div id="appContainer" class="hidden flex-col justify-between flex-1">
-        <div>
-            <!-- Header & Printer -->
-            <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
-                <div class="space-y-1">
-                    <h1 id="headerTitle" class="font-extrabold text-base tracking-wider text-blue-400">🎪 PARKIR KARNAVAL</h1>
-                    <div class="flex gap-1">
-                        <span id="badgeSesi" class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold">Pos Parkir</span>
-                    </div>
-                </div>
-                <div class="flex gap-2 items-center">
-                    <button onclick="connectBluetooth()" id="btnConnect" class="bg-gray-800 border border-gray-700 hover:bg-gray-700 text-xs px-2.5 py-2 rounded-lg font-semibold flex items-center gap-1 transition-all">
-                        <span>🖨️</span> <span id="statusPrinter">Printer</span>
-                    </button>
-                    <button onclick="logout()" class="bg-red-900/60 border border-red-700 hover:bg-red-900 text-xs px-2.5 py-2 rounded-lg font-semibold text-red-200">
-                        🚪 Keluar
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tab Navigasi -->
-            <div class="flex bg-gray-800 p-1 rounded-xl mb-4 border border-gray-700" id="navTabsContainer">
-                <button onclick="switchTab(1)" id="tabBtn1" class="flex-1 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white transition">1. Input</button>
-                <button onclick="switchTab(2)" id="tabBtn2" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-white transition">2. Data</button>
-                <button onclick="switchTab(3)" id="tabBtn3" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-white transition">3. Keluar</button>
-            </div>
-
-            <!-- HALAMAN 1: Input -->
-            <div id="page1" class="space-y-4">
-                <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Plat Nomor / No Rangka</label>
-                        <input type="text" id="platNomor" required placeholder="B 1234 XYZ" 
-                               class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-lg font-bold uppercase text-white focus:outline-none focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Jenis Kendaraan</label>
-                        <select id="jenisKendaraan" class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base font-semibold text-white focus:outline-none">
-                            <option value="Motor">Motor - Rp 10.000</option>
-                            <option value="Mobil">Mobil - Rp 25.000</option>
-                        </select>
-                    </div>
-                    <button type="button" onclick="simpanDanCetak()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl py-3.5 shadow-lg transition active:scale-95 flex justify-center items-center gap-2">
-                        <span>🖨️</span> Simpan & Cetak Struk
-                    </button>
-                </div>
-            </div>
-
-            <!-- HALAMAN 2: Data & Export -->
-            <div id="page2" class="space-y-4 hidden">
-                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex justify-between items-center">
-                    <div>
-                        <span class="text-xs font-bold text-gray-400 uppercase">Total Pendapatan</span>
-                        <div id="totalPendapatan" class="font-extrabold text-green-400 text-xl">Rp 0</div>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-xs font-bold text-gray-400 uppercase">Total Masuk</span>
-                        <div id="jumlahMasuk" class="font-bold text-white text-lg">0 Unit</div>
-                    </div>
-                </div>
-
-                <div class="flex gap-2">
-                    <button onclick="exportToExcel()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-3 shadow transition">📥 Export Excel</button>
-                    <button id="btnResetDataContainer" onclick="resetSemuaData()" class="bg-red-900/60 hover:bg-red-900 border border-red-700 text-red-200 font-bold rounded-xl text-xs px-4 py-3 shadow transition">🗑️ Reset Data</button>
-                </div>
-
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Form Input Kendaraan -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-1 h-fit">
+            <h2 class="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2">
+                ➕ Input Kendaraan Masuk
+            </h2>
+            <form id="parkingForm" onsubmit="addVehicle(event)" class="space-y-4">
                 <div>
-                    <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">Riwayat Kendaraan (Bisa Re-Print)</h2>
-                    <div id="listMasuk" class="space-y-2 max-h-[350px] overflow-y-auto">
-                        <p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Memuat data...</p>
-                    </div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Nomor Plat Kendaraan</label>
+                    <input type="text" id="plateNumber" required placeholder="Contoh: B 1234 XYZ" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 uppercase">
                 </div>
-            </div>
-
-            <!-- HALAMAN 3: Parkir Keluar -->
-            <div id="page3" class="space-y-4 hidden">
-                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xs font-bold text-red-400 uppercase">Scan Barcode Keluar</h2>
-                        <div class="flex gap-2 items-center">
-                            <button onclick="toggleFlashlight()" id="btnFlash" class="text-xs text-yellow-400 font-semibold underline hidden">💡 Lampu</button>
-                            <button onclick="stopCamera()" id="btnStopCam" class="text-xs text-gray-400 underline hidden">Matikan</button>
-                        </div>
-                    </div>
-                    <div id="reader" class="w-full overflow-hidden rounded-lg bg-black min-h-[150px]"></div>
-                    <button onclick="mulaiScan()" id="btnStartCam" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl text-xs shadow transition">📷 Nyalakan Kamera</button>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Jenis Kendaraan</label>
+                    <select id="vehicleType" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="Motor">Motor</option>
+                        <option value="Mobil">Mobil</option>
+                        <option value="Truk/Bus">Truk / Bus</option>
+                    </select>
                 </div>
-
-                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                    <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">Cari Manual Plat Nomor</h2>
-                    <div class="flex gap-2">
-                        <input type="text" id="cariPlatKeluar" placeholder="Ketik Plat..." class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-sm uppercase text-white">
-                        <button onclick="prosesCariManual()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2.5 rounded-xl text-xs font-bold">Cek</button>
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan / Pemilik</label>
+                    <input type="text" id="ownerNote" placeholder="Opsional (Nama/Keperluan)" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL KELUAR -->
-    <div id="modalKeluar" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 w-full max-w-xs space-y-4">
-            <div class="flex justify-between items-center border-b border-gray-700 pb-3">
-                <h3 class="font-bold text-sm text-red-400">Konfirmasi Keluar</h3>
-                <button onclick="closeModalKeluar()" class="text-gray-400 font-bold text-lg">&times;</button>
-            </div>
-            <div id="detailKeluar" class="text-sm space-y-1 bg-gray-900 p-3 rounded-xl border border-gray-700"></div>
-            <div class="flex gap-2">
-                <button onclick="konfirmasiKeluar()" class="flex-1 bg-green-600 text-white font-bold py-2.5 rounded-xl text-xs">✅ Selesaikan</button>
-                <button onclick="closeModalKeluar()" class="bg-gray-700 text-gray-300 font-bold px-4 py-2.5 rounded-xl text-xs">Batal</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL PRATINJAU STRUK -->
-    <div id="modalPreviewStruk" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 w-full max-w-xs space-y-4">
-            <div class="flex justify-between items-center border-b border-gray-700 pb-2">
-                <h3 class="font-bold text-xs text-blue-400 uppercase">Pratinjau Struk Parkir</h3>
-                <button onclick="closeModalPreview()" class="text-gray-400 font-bold text-lg">&times;</button>
-            </div>
-            
-            <div id="previewReceiptContent" class="bg-white text-black font-mono text-xs p-4 rounded-xl shadow-inner space-y-1 text-center"></div>
-
-            <div class="flex gap-2">
-                <button id="btnExecutePrint" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl text-xs shadow transition flex items-center justify-center gap-1">
-                    <span>🖨️</span> Cetak ke Printer
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition shadow">
+                    Simpan Kendaraan Masuk
                 </button>
-                <button onclick="closeModalPreview()" class="bg-gray-700 text-gray-300 font-bold px-4 py-3 rounded-xl text-xs">Batal</button>
+            </form>
+
+            <!-- Admin Only Actions Panel -->
+            <div id="adminActionPanel" class="mt-8 pt-6 border-t border-gray-200 hidden">
+                <h3 class="text-sm font-bold text-red-600 mb-3 flex items-center gap-1">
+                    ⚠️ Panel Khusus Super Admin
+                </h3>
+                <div class="flex flex-col gap-2">
+                    <button onclick="resetAllData()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-medium py-2 px-4 rounded-lg text-sm transition">
+                        Reset Semua Data Parkir
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div id="toastNotif" class="fixed top-5 left-1/2 -translate-x-1/2 bg-green-600 text-white font-bold px-5 py-3 rounded-2xl shadow-2xl transition-all duration-300 -translate-y-20 opacity-0 z-50 text-sm flex items-center gap-2">
-        <span>✅</span> <span id="toastText">Berhasil!</span>
-    </div>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyBeZHulUbNtJnjr-gazpG9Hlq8JdldDuYA",
-            authDomain: "parkir-bcf4b.firebaseapp.com",
-            databaseURL: "https://parkir-bcf4b-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "parkir-bcf4b",
-            storageBucket: "parkir-bcf4b.firebasestorage.app",
-            messagingSenderId: "593264421018",
-            appId: "1:593264421018:web:089a62cb21831a99799723"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
-        let currentSesi = localStorage.getItem('parkir_active_sesi') || null;
-        let dataMasuk = [];
-        let dbPasswords = {};
-        let bluetoothDevice = null, bluetoothCharacteristic = null;
-        let selectedKeluarId = null;
-        let html5QrCode = null;
-        let activeListener = null;
-        let currentPreviewData = null;
-        let isFlashOn = false;
-        const tarif = { "Motor": 10000, "Mobil": 25000 };
-
-        setTimeout(() => {
-            if (dataMasuk.length === 0) {
-                let backup = localStorage.getItem(`backup_parkir_${currentSesi}`);
-                if (backup) {
-                    dataMasuk = JSON.parse(backup);
-                    render();
-                } else {
-                    document.getElementById('listMasuk').innerHTML = `<p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Belum ada data di memori HP.</p>`;
-                }
-            }
-        }, 3000);
-
-        database.ref('settings/passwords').on('value', (snapshot) => {
-            if (snapshot.exists()) dbPasswords = snapshot.val();
-        });
-
-        function initRealtimeDataListener() {
-            if (activeListener) database.ref().off('value', activeListener);
-            let refPath = currentSesi === 'superadmin' ? 'parkir_data' : `parkir_data/${currentSesi}`;
-
-            activeListener = database.ref(refPath).on('value', (snapshot) => {
-                let gabungan = [];
-                if (snapshot.exists()) {
-                    let val = snapshot.val();
-                    if (currentSesi === 'superadmin') {
-                        Object.keys(val).forEach(posKey => {
-                            if (val[posKey] && typeof val[posKey] === 'object') {
-                                Object.values(val[posKey]).forEach(item => {
-                                    if (item && typeof item === 'object') gabungan.push(item);
-                                });
-                            }
-                        });
-                    } else {
-                        Object.values(val).forEach(item => {
-                            if (item && typeof item === 'object') gabungan.push(item);
-                        });
-                    }
-                }
-                gabungan.sort((a, b) => b.id - a.id);
-                dataMasuk = gabungan;
-                render();
-            });
-        }
-
-        window.onload = function() {
-            if (currentSesi) bukaAplikasi(currentSesi);
-        };
-
-        function prosesLogin() {
-            let sesi = document.getElementById('loginSesi').value;
-            let pass = document.getElementById('loginPassword').value;
-            if (pass !== (dbPasswords[sesi] || "123") && pass !== "admin123") return alert("Password salah!");
-            currentSesi = sesi;
-            localStorage.setItem('parkir_active_sesi', sesi);
-            bukaAplikasi(sesi);
-        }
-
-        function logout() {
-            stopCamera();
-            currentSesi = null;
-            localStorage.removeItem('parkir_active_sesi');
-            document.getElementById('pageLogin').classList.remove('hidden');
-            document.getElementById('appContainer').classList.add('hidden');
-            document.getElementById('appContainer').classList.remove('flex');
-        }
-
-        function bukaAplikasi(sesi) {
-            document.getElementById('pageLogin').classList.add('hidden');
-            document.getElementById('appContainer').classList.remove('hidden');
-            document.getElementById('appContainer').classList.add('flex');
-
-            let badge = document.getElementById('badgeSesi');
-            if (sesi === 'superadmin') {
-                badge.innerText = "👑 Super Admin";
-                badge.className = "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
-            } else {
-                badge.innerText = `Pos Parkir ${sesi.replace('parkir', '')}`;
-                badge.className = "text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold";
-            }
-            switchTab(1);
-            initRealtimeDataListener();
-        }
-
-        function showToast(pesan) {
-            let toast = document.getElementById('toastNotif');
-            document.getElementById('toastText').innerText = pesan;
-            toast.classList.remove('-translate-y-20', 'opacity-0');
-            toast.classList.add('translate-y-0', 'opacity-100');
-            setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('-translate-y-20', 'opacity-0');
-            }, 3000);
-        }
-
-        function switchTab(p) {
-            document.getElementById('page1').classList.toggle('hidden', p !== 1);
-            document.getElementById('page2').classList.toggle('hidden', p !== 2);
-            document.getElementById('page3').classList.toggle('hidden', p !== 3);
-            
-            ['tabBtn1', 'tabBtn2', 'tabBtn3'].forEach((id, idx) => {
-                document.getElementById(id).className = (p === idx + 1) 
-                    ? "flex-1 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white transition" 
-                    : "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-white transition";
-            });
-            if (p !== 3) stopCamera();
-        }
-
-        async function connectBluetooth() {
-            try {
-                document.getElementById('statusPrinter').innerText = "Mencari...";
-                bluetoothDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] });
-                const server = await bluetoothDevice.gatt.connect();
-                let service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb').catch(() => server.getPrimaryServices().then(s => s[0]));
-                let characteristics = await service.getCharacteristics();
-                bluetoothCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse) || characteristics[0];
-                document.getElementById('statusPrinter').innerText = "Connected ✓";
-                showToast("Printer Terhubung!");
-            } catch (err) {
-                document.getElementById('statusPrinter').innerText = "Printer";
-                alert("Koneksi gagal: " + err.message);
-            }
-        }
-
-        async function sendToPrinter(buffer) {
-            for (let i = 0; i < buffer.length; i += 32) {
-                await bluetoothCharacteristic.writeValue(buffer.slice(i, i + 32));
-                await new Promise(r => setTimeout(r, 20));
-            }
-        }
-
-        function createQrBitmap(textValue) {
-            return new Promise((resolve) => {
-                let tempDiv = document.createElement('div');
-                tempDiv.style.display = 'none';
-                document.body.appendChild(tempDiv);
-                new QRCode(tempDiv, { text: textValue, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.L });
-
-                setTimeout(() => {
-                    let canvas = tempDiv.querySelector('canvas');
-                    if (!canvas) { document.body.removeChild(tempDiv); return resolve(null); }
-                    let ctx = canvas.getContext('2d');
-                    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    let bytesPerRow = Math.ceil(canvas.width / 8), rasterBytes = [];
-                    
-                    for (let y = 0; y < canvas.height; y++) {
-                        for (let xByte = 0; xByte < bytesPerRow; xByte++) {
-                            let byte = 0;
-                            for (let bit = 0; bit < 8; bit++) {
-                                let x = xByte * 8 + bit;
-                                if (x < canvas.width && imgData.data[(y * canvas.width + x) * 4] < 128) byte |= (1 << (7 - bit));
-                            }
-                            rasterBytes.push(byte);
-                        }
-                    }
-                    document.body.removeChild(tempDiv);
-                    resolve(new Uint8Array([0x1D, 0x76, 0x30, 0x00, bytesPerRow & 0xFF, (bytesPerRow >> 8) & 0xFF, canvas.height & 0xFF, (canvas.height >> 8) & 0xFF, ...rasterBytes]));
-                }, 150);
-            });
-        }
-
-        async function executePrintStruk() {
-            closeModalPreview();
-            if (!currentPreviewData) return;
-            if (!bluetoothCharacteristic) {
-                return alert("Printer belum terhubung! Silakan klik tombol 'Printer' di pojok kanan atas.");
-            }
-            try {
-                let enc = new TextEncoder();
-                let qrBitmap = await createQrBitmap(`PARKIR-${currentPreviewData.plat}-${currentPreviewData.id}`);
-                let parts = [
-                    new Uint8Array([0x1B, 0x40, 0x1B, 0x61, 0x01, 0x1B, 0x45, 0x01]),
-                    enc.encode("PANITIA PARKIR KARNAVAL\n"),
-                    new Uint8Array([0x1B, 0x45, 0x00]),
-                    enc.encode("--------------------------------\n"),
-                    new Uint8Array([0x1D, 0x21, 0x11]),
-                    enc.encode(`\n${currentPreviewData.plat}\n\n`),
-                    new Uint8Array([0x1D, 0x21, 0x00]),
-                    enc.encode(`Pos    : ${currentPreviewData.posAsal}\nJenis  : ${currentPreviewData.jenis}\nMasuk  : ${currentPreviewData.waktu}\nBayar  : Rp ${currentPreviewData.biaya.toLocaleString('id-ID')}\nStatus : ${currentPreviewData.status}\n--------------------------------\n`),
-                    qrBitmap || new Uint8Array(0),
-                    enc.encode("\nStruk hilang tunjuk kan STNK/no.RANGKA sesuai tiket parkir/tunggu parkir sampai akhir\nTERIMAKASIH\n\n\n")
-                ];
-                let totalLength = parts.reduce((a, b) => a + b.length, 0);
-                let fullBuffer = new Uint8Array(totalLength);
-                let offset = 0;
-                parts.forEach(p => { fullBuffer.set(p, offset); offset += p.length; });
-                await sendToPrinter(fullBuffer);
-                showToast("Struk Berhasil Dicetak Ulang");
-            } catch (e) { 
-                alert("Gagal cetak struk: " + e.message + "\nCoba matikan lalu nyalakan ulang bluetooth HP."); 
-            }
-        }
-
-        function rePrintStruk(id) {
-            let found = dataMasuk.find(x => x.id === id);
-            if (!found) return alert("Data tidak ditemukan!");
-            currentPreviewData = found;
-
-            let previewBox = document.getElementById('previewReceiptContent');
-            previewBox.innerHTML = `
-                <div class="font-bold">PANITIA PARKIR KARNAVAL</div>
-                <div class="text-[10px] text-gray-600">--------------------------------</div>
-                <div class="text-base font-extrabold my-2">${found.plat}</div>
-                <div class="text-left space-y-0.5 text-[11px] px-2">
-                    <div><b>Pos:</b> ${found.posAsal}</div>
-                    <div><b>Jenis:</b> ${found.jenis}</div>
-                    <div><b>Masuk:</b> ${found.waktu}</div>
-                    <div><b>Biaya:</b> Rp ${found.biaya.toLocaleString('id-ID')}</div>
-                    <div><b>Status:</b> ${found.status}</div>
+        <!-- Daftar & Status Parkir -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-2 flex flex-col">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 class="text-lg font-bold text-gray-700 flex items-center gap-2">
+                    📋 Daftar Kendaraan Aktif
+                </h2>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <input type="text" id="searchInput" onkeyup="filterParking()" placeholder="Cari Plat Nomor..." class="px-3 py-1.5 border rounded-lg text-sm w-full sm:w-64 focus:ring-2 focus:ring-blue-500">
                 </div>
-                <div class="text-[10px] text-gray-600 mt-1">--------------------------------</div>
-                <div id="previewQrContainer" class="flex justify-center my-2"></div>
-                <div class="text-[10px] text-gray-600 mt-2 leading-tight px-1">Struk hilang tunjuk kan STNK/no.RANGKA sesuai tiket parkir/tunggu parkir sampai akhir</div>
-                <div class="font-bold text-[11px] mt-2">TERIMAKASIH</div>
-            `;
+            </div>
 
-            setTimeout(() => {
-                let qrContainer = document.getElementById('previewQrContainer');
-                if(qrContainer) {
-                    qrContainer.innerHTML = "";
-                    new QRCode(qrContainer, {
-                        text: `PARKIR-${found.plat}-${found.id}`,
-                        width: 90,
-                        height: 90,
-                        correctLevel: QRCode.CorrectLevel.L
-                    });
-                }
-            }, 100);
+            <!-- Tabel Data -->
+            <div class="overflow-x-auto flex-grow">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs tracking-wider">
+                            <th class="p-3">Waktu Masuk</th>
+                            <th class="p-3">Plat Nomor</th>
+                            <th class="p-3">Jenis</th>
+                            <th class="p-3">Pos Masuk</th>
+                            <th class="p-3">Keterangan</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parkingTableBody" class="divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="6" class="text-center py-6 text-gray-400">Memuat data dari server...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-            document.getElementById('modalPreviewStruk').classList.remove('hidden');
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 py-4 text-center text-xs text-gray-500">
+        &copy; 2026 Junior Cell Parking Management System. All rights reserved.
+    </footer>
+
+    <!-- Firebase Script Configuration & Logic -->
+    <script>
+        // ==========================================
+        // MASUKKAN KREDENSIAL FIREBASE ANDA DI SINI
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "MASUKKAN_API_KEY_ANDA",
+            authDomain: "MASUKKAN_AUTH_DOMAIN_ANDA",
+            databaseURL: "MASUKKAN_DATABASE_URL_ANDA",
+            projectId: "MASUKKAN_PROJECT_ID_ANDA",
+            storageBucket: "MASUKKAN_STORAGE_BUCKET_ANDA",
+            messagingSenderId: "MASUKKAN_MESSAGING_SENDER_ID_ANDA",
+            appId: "MASUKKAN_APP_ID_ANDA"
+        };
+
+        // Inisialisasi Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const database = firebase.database();
+        const parkingRef = database.ref('parking_vehicles');
+
+        // State Role Pengguna
+        let currentRole = localStorage.getItem('parking_user_role') || 'Pos Parkir 1';
+        document.getElementById('userRoleSelect').value = currentRole;
+        updateRoleUI();
+
+        function changeUserRole() {
+            currentRole = document.getElementById('userRoleSelect').value;
+            localStorage.setItem('parking_user_role', currentRole);
+            updateRoleUI();
+            loadParkingData(); 
         }
 
-        function closeModalPreview() {
-            document.getElementById('modalPreviewStruk').classList.add('hidden');
+        function updateRoleUI() {
+            const adminPanel = document.getElementById('adminActionPanel');
+            if (currentRole === 'Super Admin') {
+                adminPanel.classList.remove('hidden');
+            } else {
+                adminPanel.classList.add('hidden');
+            }
         }
 
-        document.getElementById('btnExecutePrint').onclick = executePrintStruk;
+        // Tambah Kendaraan Masuk
+        function addVehicle(event) {
+            event.preventDefault();
+            const plateNumber = document.getElementById('plateNumber').value.trim().toUpperCase();
+            const vehicleType = document.getElementById('vehicleType').value;
+            const ownerNote = document.getElementById('ownerNote').value.trim();
+            const entryTime = new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'medium' });
 
-        function simpanDanCetak() {
-            const platInput = document.getElementById('platNomor');
-            const plat = platInput.value.trim().toUpperCase();
-            if (!plat) return alert("Nomor plat tidak boleh kosong!");
-
-            const jenis = document.getElementById('jenisKendaraan').value;
-            const now = new Date();
-            const id = Date.now();
-            
-            let activeSesi = currentSesi || localStorage.getItem('parkir_active_sesi');
-            let targetPos = (activeSesi && activeSesi !== 'superadmin') ? activeSesi : 'parkir1';
-
-            const item = {
-                id: id,
-                plat: plat,
-                jenis: jenis,
-                waktu: now.toLocaleDateString('id-ID') + ' ' + now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}),
-                biaya: tarif[jenis],
-                status: 'Di Dalam',
-                posAsal: targetPos.toUpperCase().replace('PARKIR', 'Pos ')
+            const newVehicle = {
+                plateNumber: plateNumber,
+                vehicleType: vehicleType,
+                ownerNote: ownerNote || '-',
+                entryTime: entryTime,
+                position: currentRole,
+                timestamp: Date.now()
             };
 
-            let exist = dataMasuk.find(x => x.id === item.id);
-            if (!exist) {
-                dataMasuk.unshift(item);
-                render();
-            }
-            
-            platInput.value = '';
-            showToast(`Tersimpan: ${plat}`);
-
-            currentPreviewData = item;
-            executePrintStrukDirect();
-
-            database.ref(`parkir_data/${targetPos}/${id}`).set(item).catch(e => {
-                console.error("Firebase Error:", e);
+            parkingRef.push(newVehicle).then(() => {
+                document.getElementById('parkingForm').reset();
+                alert('Kendaraan berhasil dicatat!');
+            }).catch((error) => {
+                alert('Gagal menyimpan: ' + error.message);
             });
         }
 
-        async function executePrintStrukDirect() {
-            if (!bluetoothCharacteristic) return;
-            try {
-                let enc = new TextEncoder();
-                let qrBitmap = await createQrBitmap(`PARKIR-${currentPreviewData.plat}-${currentPreviewData.id}`);
-                let parts = [
-                    new Uint8Array([0x1B, 0x40, 0x1B, 0x61, 0x01, 0x1B, 0x45, 0x01]),
-                    enc.encode("PANITIA PARKIR KARNAVAL\n"),
-                    new Uint8Array([0x1B, 0x45, 0x00]),
-                    enc.encode("--------------------------------\n"),
-                    new Uint8Array([0x1D, 0x21, 0x11]),
-                    enc.encode(`\n${currentPreviewData.plat}\n\n`),
-                    new Uint8Array([0x1D, 0x21, 0x00]),
-                    enc.encode(`Pos    : ${currentPreviewData.posAsal}\nJenis  : ${currentPreviewData.jenis}\nMasuk  : ${currentPreviewData.waktu}\nBayar  : Rp ${currentPreviewData.biaya.toLocaleString('id-ID')}\nStatus : ${currentPreviewData.status}\n--------------------------------\n`),
-                    qrBitmap || new Uint8Array(0),
-                    enc.encode("\nStruk hilang tunjuk kan STNK/no.RANGKA sesuai tiket parkir/tunggu parkir sampai akhir\nTERIMAKASIH\n\n\n")
-                ];
-                let totalLength = parts.reduce((a, b) => a + b.length, 0);
-                let fullBuffer = new Uint8Array(totalLength);
-                let offset = 0;
-                parts.forEach(p => { fullBuffer.set(p, offset); offset += p.length; });
-                await sendToPrinter(fullBuffer);
-            } catch (e) { 
-                console.error("Gagal cetak langsung: " + e.message);
-            }
+        // Ambil dan Pantau Data Secara Real-Time
+        let globalParkingData = [];
+        function loadParkingData() {
+            parkingRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                const tbody = document.getElementById('parkingTableBody');
+                tbody.innerHTML = '';
+
+                if (!data) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Belum ada kendaraan terparkir.</td></tr>`;
+                    globalParkingData = [];
+                    return;
+                }
+
+                globalParkingData = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+                globalParkingData.sort((a, b) => b.timestamp - a.timestamp);
+                
+                renderTable(globalParkingData);
+            });
         }
 
-        function render() {
-            if(currentSesi) localStorage.setItem(`backup_parkir_${currentSesi}`, JSON.stringify(dataMasuk));
+        function renderTable(dataList) {
+            const tbody = document.getElementById('parkingTableBody');
+            tbody.innerHTML = '';
 
-            let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + curr.biaya, 0);
-            document.getElementById('jumlahMasuk').innerText = dataMasuk.length + " Unit";
-            document.getElementById('totalPendapatan').innerText = `Rp ${totalPendapatan.toLocaleString('id-ID')}`;
-            
-            let list = document.getElementById('listMasuk');
-            if (!dataMasuk.length) {
-                list.innerHTML = `<p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Belum ada data kendaraan.</p>`;
+            if (dataList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Tidak ada kendaraan yang cocok dengan pencarian.</td></tr>`;
                 return;
             }
-            
-            list.innerHTML = '';
-            dataMasuk.forEach(r => {
-                let statusBadge = r.status === 'Keluar' ? '<span class="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded">Keluar</span>' : '<span class="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded">Di Dalam</span>';
-                list.innerHTML += `
-                    <div class="bg-gray-800 p-3.5 rounded-xl border border-gray-700 flex justify-between items-center text-sm">
-                        <div>
-                            <div class="font-extrabold text-white">${r.plat} <span class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded font-bold">${r.posAsal}</span> <span class="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">${r.jenis}</span> ${statusBadge}</div>
-                            <div class="text-xs text-gray-400 mt-0.5">🕒 ${r.waktu}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-extrabold text-green-400">Rp ${r.biaya.toLocaleString('id-ID')}</div>
-                            <div class="flex gap-2 justify-end mt-1">
-                                <button onclick="rePrintStruk(${r.id})" class="text-xs text-blue-400 font-semibold underline bg-blue-950/40 px-2 py-0.5 rounded">🖨️ Print</button>
-                                <button onclick="hapusData(${r.id})" class="text-xs text-red-400 underline">Hapus</button>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-        }
 
-        function mulaiScan() {
-            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-            
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                { fps: 10, qrbox: 200 }, 
-                (decodedText) => {
-                    let id = decodedText.split('-').pop();
-                    let found = dataMasuk.find(x => x.id.toString() === id);
-                    if (found) {
-                        if (found.status === 'Keluar') return alert("Sudah keluar!");
-                        stopCamera();
-                        bukaModalKeluar(found.id);
-                    } else { alert("Barcode tidak terdaftar!"); }
+            dataList.forEach((item) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition";
+                
+                // Tombol Hapus hanya muncul jika role adalah Super Admin
+                let actionButtonHtml = `<span class="text-xs text-gray-400 italic">Terkunci (Pos)</span>`;
+                if (currentRole === 'Super Admin') {
+                    actionButtonHtml = `
+                        <button onclick="deleteVehicle('${item.id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold shadow transition">
+                            Hapus / Keluar
+                        </button>
+                    `;
                 }
-            ).then(() => {
-                document.getElementById('btnStartCam').classList.add('hidden');
-                document.getElementById('btnStopCam').classList.remove('hidden');
-                document.getElementById('btnFlash').classList.remove('hidden');
-            }).catch(err => {
-                alert("Gagal membuka kamera: " + err);
+
+                tr.innerHTML = `
+                    <td class="p-3 font-mono text-xs text-gray-500">${item.entryTime}</td>
+                    <td class="p-3 font-bold text-gray-800">${item.plateNumber}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">${item.vehicleType}</span></td>
+                    <td class="p-3 text-xs text-gray-600">${item.position}</td>
+                    <td class="p-3 text-gray-600">${item.ownerNote}</td>
+                    <td class="p-3 text-center">${actionButtonHtml}</td>
+                `;
+                tbody.appendChild(tr);
             });
         }
 
-        async function toggleFlashlight() {
-            if (!html5QrCode || !html5QrCode.isScanning) return;
-            try {
-                isFlashOn = !isFlashOn;
-                await html5QrCode.applyVideoConstraints({
-                    advanced: [{ torch: isFlashOn }]
+        // Filter Pencarian
+        function filterParking() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = globalParkingData.filter(item => 
+                item.plateNumber.toLowerCase().includes(keyword) || 
+                item.ownerNote.toLowerCase().includes(keyword) ||
+                item.vehicleType.toLowerCase().includes(keyword) ||
+                item.position.toLowerCase().includes(keyword)
+            );
+            renderTable(filtered);
+        }
+
+        // Hapus Data Satuan (Super Admin Only)
+        function deleteVehicle(id) {
+            if (currentRole !== 'Super Admin') {
+                alert('Akses ditolak! Hanya Super Admin yang dapat menghapus data.');
+                return;
+            }
+            if (confirm('Apakah Anda yakin ingin menghapus data kendaraan ini?')) {
+                parkingRef.child(id).remove().catch((error) => {
+                    alert('Gagal menghapus: ' + error.message);
                 });
-                let btnFlash = document.getElementById('btnFlash');
-                if (isFlashOn) {
-                    btnFlash.innerText = "💡 Matikan Lampu";
-                    btnFlash.className = "text-xs text-yellow-200 font-bold underline bg-yellow-900/50 px-2 py-0.5 rounded";
-                } else {
-                    btnFlash.innerText = "💡 Lampu";
-                    btnFlash.className = "text-xs text-yellow-400 font-semibold underline";
-                }
-            } catch (err) {
-                alert("Lampu flash tidak didukung di perangkat/browser ini: " + err.message);
-                isFlashOn = false;
             }
         }
 
-        function stopCamera() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => {
-                    isFlashOn = false;
-                    document.getElementById('btnStartCam').classList.remove('hidden');
-                    document.getElementById('btnStopCam').classList.add('hidden');
-                    document.getElementById('btnFlash').classList.add('hidden');
-                    document.getElementById('btnFlash').innerText = "💡 Lampu";
-                    document.getElementById('btnFlash').className = "text-xs text-yellow-400 font-semibold underline";
-                }).catch(() => {});
+        // Reset Semua Data (Super Admin Only)
+        function resetAllData() {
+            if (currentRole !== 'Super Admin') {
+                alert('Akses ditolak! Hanya Super Admin yang dapat mereset data.');
+                return;
+            }
+            if (confirm('PERINGATAN: Semua data parkir akan dihapus permanen! Lanjutkan?')) {
+                parkingRef.remove().then(() => {
+                    alert('Semua data berhasil direset.');
+                }).catch((error) => {
+                    alert('Gagal mereset: ' + error.message);
+                });
             }
         }
 
-        function prosesCariManual() {
-            let query = document.getElementById('cariPlatKeluar').value.trim().toUpperCase();
-            if (!query) return;
-            let found = dataMasuk.find(x => x.plat.includes(query) && x.status === 'Di Dalam');
-            if (found) bukaModalKeluar(found.id);
-            else alert("Kendaraan aktif dengan plat tersebut tidak ditemukan.");
-        }
-
-        function bukaModalKeluar(id) {
-            let d = dataMasuk.find(x => x.id === id);
-            selectedKeluarId = id;
-            document.getElementById('detailKeluar').innerHTML = `<b>Plat:</b> ${d.plat}<br><b>Pos:</b> ${d.posAsal}<br><b>Biaya:</b> Rp ${d.biaya.toLocaleString('id-ID')}`;
-            document.getElementById('modalKeluar').classList.remove('hidden');
-        }
-
-        function closeModalKeluar() { document.getElementById('modalKeluar').classList.add('hidden'); }
-
-        function konfirmasiKeluar() {
-            let d = dataMasuk.find(x => x.id === selectedKeluarId);
-            let posKey = d.posAsal.toLowerCase().replace('pos ', 'parkir').trim();
-            d.status = 'Keluar'; render();
-            database.ref(`parkir_data/${posKey}/${selectedKeluarId}/status`).set('Keluar');
-            closeModalKeluar();
-            showToast("Status: Keluar!");
-        }
-
-        function hapusData(id) {
-            let d = dataMasuk.find(x => x.id === id);
-            let posKey = d.posAsal.toLowerCase().replace('pos ', 'parkir').trim();
-            if (confirm("Hapus data ini?")) {
-                dataMasuk = dataMasuk.filter(x => x.id !== id); render();
-                database.ref(`parkir_data/${posKey}/${id}`).remove();
-            }
-        }
-
-        function resetSemuaData() {
-            if (confirm("Kosongkan seluruh data pos ini?")) {
-                dataMasuk = []; render();
-                database.ref(`parkir_data/${currentSesi}`).remove();
-                localStorage.removeItem(`backup_parkir_${currentSesi}`);
-            }
-        }
-
-        function exportToExcel() {
-            if (!dataMasuk.length) return alert("Kosong!");
-            let html = `<table border="1"><tr><th>Pos</th><th>Waktu</th><th>Plat</th><th>Jenis</th><th>Biaya</th><th>Status</th></tr>`;
-            dataMasuk.forEach(d => html += `<tr><td>${d.posAsal}</td><td>${d.waktu}</td><td>${d.plat}</td><td>${d.jenis}</td><td>${d.biaya}</td><td>${d.status}</td></tr>`);
-            html += `</table>`;
-            let a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([html], { type: 'application/vnd.ms-excel' }));
-            a.download = `Rekap_${currentSesi}.xls`;
-            a.click();
-        }
+        loadParkingData();
     </script>
 </body>
 </html>
