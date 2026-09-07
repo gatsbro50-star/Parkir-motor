@@ -124,6 +124,7 @@
                     <div class="flex justify-between items-center">
                         <h2 class="text-xs font-bold text-red-400 uppercase">Scan Barcode Keluar</h2>
                         <div class="flex gap-2 items-center">
+                            <button onclick="toggleFlashlight()" id="btnFlash" class="text-xs text-yellow-400 font-semibold underline hidden">💡 Lampu</button>
                             <button onclick="stopCamera()" id="btnStopCam" class="text-xs text-gray-400 underline hidden">Matikan</button>
                         </div>
                     </div>
@@ -205,6 +206,7 @@
         let html5QrCode = null;
         let activeListener = null;
         let currentPreviewData = null;
+        let isFlashOn = false;
         const tarif = { "Motor": 10000, "Mobil": 25000 };
 
         setTimeout(() => {
@@ -455,7 +457,6 @@
             const now = new Date();
             const id = Date.now();
             
-            // Tentukan target pos berdasarkan sesi aktif login saat ini
             let activeSesi = currentSesi || localStorage.getItem('parkir_active_sesi');
             let targetPos = (activeSesi && activeSesi !== 'superadmin') ? activeSesi : 'parkir1';
 
@@ -481,7 +482,6 @@
             currentPreviewData = item;
             executePrintStrukDirect();
 
-            // Kirim data ke path Firebase sesuai pos masing-masing
             database.ref(`parkir_data/${targetPos}/${id}`).set(item)
                 .then(() => {
                     console.log("Berhasil tersimpan ke path: parkir_data/" + targetPos + "/" + id);
@@ -556,25 +556,61 @@
 
         function mulaiScan() {
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (decodedText) => {
-                let id = decodedText.split('-').pop();
-                let found = dataMasuk.find(x => x.id.toString() === id);
-                if (found) {
-                    if (found.status === 'Keluar') return alert("Sudah keluar!");
-                    stopCamera();
-                    bukaModalKeluar(found.id);
-                } else { alert("Barcode tidak terdaftar!"); }
-            }).then(() => {
+            
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: 200 }, 
+                (decodedText) => {
+                    let id = decodedText.split('-').pop();
+                    let found = dataMasuk.find(x => x.id.toString() === id);
+                    if (found) {
+                        if (found.status === 'Keluar') return alert("Sudah keluar!");
+                        stopCamera();
+                        bukaModalKeluar(found.id);
+                    } else { alert("Barcode tidak terdaftar!"); }
+                }
+            ).then(() => {
                 document.getElementById('btnStartCam').classList.add('hidden');
                 document.getElementById('btnStopCam').classList.remove('hidden');
+                
+                let capabilities = html5QrCode.getRunningTrackCameraCapabilities();
+                if (capabilities && capabilities.torchSupported) {
+                    document.getElementById('btnFlash').classList.remove('hidden');
+                }
+            }).catch(err => {
+                alert("Gagal membuka kamera: " + err);
             });
+        }
+
+        async function toggleFlashlight() {
+            if (!html5QrCode || !html5QrCode.isScanning) return;
+            try {
+                isFlashOn = !isFlashOn;
+                await html5QrCode.applyVideoConstraints({
+                    advanced: [{ torch: isFlashOn }]
+                });
+                let btnFlash = document.getElementById('btnFlash');
+                if (isFlashOn) {
+                    btnFlash.innerText = "💡 Matikan Lampu";
+                    btnFlash.className = "text-xs text-yellow-200 font-bold underline bg-yellow-900/50 px-2 py-0.5 rounded";
+                } else {
+                    btnFlash.innerText = "💡 Lampu";
+                    btnFlash.className = "text-xs text-yellow-400 font-semibold underline";
+                }
+            } catch (err) {
+                alert("Perangkat atau browser tidak mendukung kontrol lampu flash: " + err.message);
+            }
         }
 
         function stopCamera() {
             if (html5QrCode && html5QrCode.isScanning) {
                 html5QrCode.stop().then(() => {
+                    isFlashOn = false;
                     document.getElementById('btnStartCam').classList.remove('hidden');
                     document.getElementById('btnStopCam').classList.add('hidden');
+                    document.getElementById('btnFlash').classList.add('hidden');
+                    document.getElementById('btnFlash').innerText = "💡 Lampu";
+                    document.getElementById('btnFlash').className = "text-xs text-yellow-400 font-semibold underline";
                 }).catch(() => {});
             }
         }
