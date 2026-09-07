@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Manajemen Parkir - Junior Cell</title>
+    <title>Parkir Karnaval - Junior Cell</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Firebase SDKs -->
@@ -11,114 +11,136 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col justify-between">
 
     <!-- Header -->
-    <header class="bg-blue-600 text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+    <header class="bg-slate-900 border-b border-slate-800 p-4 shadow-md">
+        <div class="max-w-md mx-auto flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold flex items-center gap-2">
-                    🚗 Parkir System <span class="text-xs bg-blue-500 px-2 py-1 rounded">Real-Time</span>
+                <h1 class="text-xl font-bold flex items-center gap-2 text-white">
+                    🎪 PARKIR KARNAVAL
                 </h1>
-                <p class="text-blue-100 text-sm">Junior Cell Parking Management</p>
+                <div class="mt-1">
+                    <select id="userRoleSelect" onchange="changeUserRole()" class="bg-blue-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow focus:outline-none cursor-pointer">
+                        <option value="Pos Parkir 1">Pos Parkir 1</option>
+                        <option value="Pos Parkir 2">Pos Parkir 2</option>
+                        <option value="Pos Parkir 3">Pos Parkir 3</option>
+                        <option value="Pos Parkir 4">Pos Parkir 4</option>
+                        <option value="Super Admin">Super Admin</option>
+                    </select>
+                </div>
             </div>
-            <div class="flex items-center gap-3 bg-blue-700 px-4 py-2 rounded-lg shadow-inner">
-                <span class="text-sm text-blue-200">Login Sebagai:</span>
-                <select id="userRoleSelect" onchange="changeUserRole()" class="bg-white text-gray-800 font-semibold px-3 py-1 rounded shadow focus:outline-none">
-                    <option value="Pos Parkir 1">Pos Parkir 1</option>
-                    <option value="Pos Parkir 2">Pos Parkir 2</option>
-                    <option value="Pos Parkir 3">Pos Parkir 3</option>
-                    <option value="Pos Parkir 4">Pos Parkir 4</option>
-                    <option value="Super Admin">Super Admin</option>
-                </select>
+            <div class="flex items-center gap-2">
+                <button class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1">
+                    🖨️ Printer
+                </button>
+                <button class="bg-red-950 hover:bg-red-900 text-red-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-800 flex items-center gap-1">
+                    🚪 Keluar
+                </button>
             </div>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Form Input Kendaraan -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-1 h-fit">
-            <h2 class="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2">
-                ➕ Input Kendaraan Masuk
-            </h2>
-            <form id="parkingForm" onsubmit="addVehicle(event)" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Nomor Plat Kendaraan</label>
-                    <input type="text" id="plateNumber" required placeholder="Contoh: B 1234 XYZ" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 uppercase">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Jenis Kendaraan</label>
-                    <select id="vehicleType" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="Motor">Motor</option>
-                        <option value="Mobil">Mobil</option>
-                        <option value="Truk/Bus">Truk / Bus</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan / Pemilik</label>
-                    <input type="text" id="ownerNote" placeholder="Opsional (Nama/Keperluan)" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition shadow">
-                    Simpan Kendaraan Masuk
-                </button>
-            </form>
+    <!-- Navigation Tabs -->
+    <div class="max-w-md mx-auto w-full px-4 mt-4">
+        <div class="grid grid-cols-3 gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800">
+            <button onclick="switchTab('input')" id="tabInput" class="py-2 text-center text-xs font-semibold rounded-lg transition bg-blue-600 text-white shadow">
+                1. Input
+            </button>
+            <button onclick="switchTab('data')" id="tabData" class="py-2 text-center text-xs font-semibold rounded-lg transition text-slate-400 hover:text-white">
+                2. Data
+            </button>
+            <button onclick="switchTab('keluar')" id="tabKeluar" class="py-2 text-center text-xs font-semibold rounded-lg transition text-slate-400 hover:text-white">
+                3. Keluar
+            </button>
+        </div>
+    </div>
 
-            <!-- Admin Only Actions Panel -->
-            <div id="adminActionPanel" class="mt-8 pt-6 border-t border-gray-200 hidden">
-                <h3 class="text-sm font-bold text-red-600 mb-3 flex items-center gap-1">
-                    ⚠️ Panel Khusus Super Admin
-                </h3>
-                <div class="flex flex-col gap-2">
-                    <button onclick="resetAllData()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-medium py-2 px-4 rounded-lg text-sm transition">
-                        Reset Semua Data Parkir
+    <!-- Main Content Container -->
+    <main class="max-w-md mx-auto px-4 py-4 flex-grow w-full space-y-4">
+        
+        <!-- VIEW 1: INPUT KENDARAAN -->
+        <div id="viewInput" class="space-y-4">
+            <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-sm space-y-4">
+                <h2 class="text-sm font-bold text-slate-300">Form Kendaraan Masuk</h2>
+                <form id="parkingForm" onsubmit="addVehicle(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Nomor Plat Kendaraan</label>
+                        <input type="text" id="plateNumber" required placeholder="Contoh: B 1234 XYZ" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm uppercase focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Jenis Kendaraan & Tarif</label>
+                        <select id="vehicleType" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="Motor">Motor - Rp 10.000</option>
+                            <option value="Mobil">Mobil - Rp 20.000</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Keterangan / Pemilik</label>
+                        <input type="text" id="ownerNote" placeholder="Opsional" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-sm transition shadow-md">
+                        Simpan & Cetak Tiket
                     </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VIEW 2: DATA & LAPORAN -->
+        <div id="viewData" class="space-y-4 hidden">
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                    <p class="text-[10px] uppercase font-semibold text-slate-400">Total Pendapatan</p>
+                    <p id="totalRevenue" class="text-lg font-bold text-emerald-400 mt-1">Rp 0</p>
+                </div>
+                <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                    <p class="text-[10px] uppercase font-semibold text-slate-400">Total Masuk</p>
+                    <p id="totalCount" class="text-lg font-bold text-white mt-1">0 Unit</p>
+                </div>
+            </div>
+
+            <!-- Admin Action Buttons (Export & Reset) -->
+            <div class="flex gap-2">
+                <button onclick="exportExcel()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1 shadow">
+                    📥 Export Excel
+                </button>
+                <!-- Tombol Reset Data (Hanya Super Admin) -->
+                <button id="btnResetData" onclick="resetAllData()" class="flex-1 bg-red-900/80 hover:bg-red-800 text-red-200 border border-red-700 font-medium py-2 px-3 rounded-xl text-xs transition hidden items-center justify-center gap-1 shadow">
+                    🗑️ Reset Data
+                </button>
+            </div>
+
+            <!-- Daftar Riwayat -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Riwayat Kendaraan</h3>
+                <div id="parkingListContainer" class="space-y-2.5">
+                    <p class="text-center text-xs text-slate-500 py-6">Memuat data...</p>
                 </div>
             </div>
         </div>
 
-        <!-- Daftar & Status Parkir -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-2 flex flex-col">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h2 class="text-lg font-bold text-gray-700 flex items-center gap-2">
-                    📋 Daftar Kendaraan Aktif
-                </h2>
-                <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <input type="text" id="searchInput" onkeyup="filterParking()" placeholder="Cari Plat Nomor..." class="px-3 py-1.5 border rounded-lg text-sm w-full sm:w-64 focus:ring-2 focus:ring-blue-500">
+        <!-- VIEW 3: KELUAR KENDARAAN -->
+        <div id="viewKeluar" class="space-y-4 hidden">
+            <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-sm space-y-4">
+                <h2 class="text-sm font-bold text-slate-300">Scan / Masukkan Plat Keluar</h2>
+                <div class="space-y-3">
+                    <input type="text" id="searchExitPlate" placeholder="Ketik Plat Nomor..." onkeyup="filterExitList()" class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm uppercase focus:ring-2 focus:ring-blue-500">
                 </div>
-            </div>
-
-            <!-- Tabel Data -->
-            <div class="overflow-x-auto flex-grow">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs tracking-wider">
-                            <th class="p-3">Waktu Masuk</th>
-                            <th class="p-3">Plat Nomor</th>
-                            <th class="p-3">Jenis</th>
-                            <th class="p-3">Pos Masuk</th>
-                            <th class="p-3">Keterangan</th>
-                            <th class="p-3 text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="parkingTableBody" class="divide-y divide-gray-200">
-                        <tr>
-                            <td colspan="6" class="text-center py-6 text-gray-400">Memuat data dari server...</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div id="exitListContainer" class="space-y-2 mt-2">
+                    <p class="text-center text-xs text-slate-500 py-4">Ketik plat nomor untuk memproses kendaraan keluar.</p>
+                </div>
             </div>
         </div>
 
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 py-4 text-center text-xs text-gray-500">
-        &copy; 2026 Junior Cell Parking Management System. All rights reserved.
+    <footer class="bg-slate-900 border-t border-slate-800 py-3 text-center text-[10px] text-slate-500 mt-6">
+        &copy; 2026 Junior Cell - Parkir Karnaval Real-Time System
     </footer>
 
     <!-- Firebase Script Configuration & Logic -->
@@ -136,137 +158,172 @@
             appId: "MASUKKAN_APP_ID_ANDA"
         };
 
-        // Inisialisasi Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const database = firebase.database();
-        const parkingRef = database.ref('parking_vehicles');
+        const parkingRef = database.ref('parking_karnaval');
 
         // State Role Pengguna
-        let currentRole = localStorage.getItem('parking_user_role') || 'Pos Parkir 1';
+        let currentRole = localStorage.getItem('karnaval_user_role') || 'Pos Parkir 1';
         document.getElementById('userRoleSelect').value = currentRole;
         updateRoleUI();
 
         function changeUserRole() {
             currentRole = document.getElementById('userRoleSelect').value;
-            localStorage.setItem('parking_user_role', currentRole);
+            localStorage.setItem('karnaval_user_role', currentRole);
             updateRoleUI();
-            loadParkingData(); 
+            loadParkingData();
         }
 
         function updateRoleUI() {
-            const adminPanel = document.getElementById('adminActionPanel');
+            const btnReset = document.getElementById('btnResetData');
             if (currentRole === 'Super Admin') {
-                adminPanel.classList.remove('hidden');
+                btnReset.classList.remove('hidden');
+                btnReset.classList.add('flex');
             } else {
-                adminPanel.classList.add('hidden');
+                btnReset.classList.add('hidden');
+                btnReset.classList.remove('flex');
+            }
+            if (globalParkingData.length > 0) {
+                renderUI(globalParkingData);
             }
         }
 
-        // Tambah Kendaraan Masuk
+        // Tab Switching
+        function switchTab(tabName) {
+            document.getElementById('viewInput').classList.add('hidden');
+            document.getElementById('viewData').classList.add('hidden');
+            document.getElementById('viewKeluar').classList.add('hidden');
+
+            document.getElementById('tabInput').className = "py-2 text-center text-xs font-semibold rounded-lg transition text-slate-400 hover:text-white";
+            document.getElementById('tabData').className = "py-2 text-center text-xs font-semibold rounded-lg transition text-slate-400 hover:text-white";
+            document.getElementById('tabKeluar').className = "py-2 text-center text-xs font-semibold rounded-lg transition text-slate-400 hover:text-white";
+
+            if (tabName === 'input') {
+                document.getElementById('viewInput').classList.remove('hidden');
+                document.getElementById('tabInput').className = "py-2 text-center text-xs font-semibold rounded-lg transition bg-blue-600 text-white shadow";
+            } else if (tabName === 'data') {
+                document.getElementById('viewData').classList.remove('hidden');
+                document.getElementById('tabData').className = "py-2 text-center text-xs font-semibold rounded-lg transition bg-blue-600 text-white shadow";
+            } else if (tabName === 'keluar') {
+                document.getElementById('viewKeluar').classList.remove('hidden');
+                document.getElementById('tabKeluar').className = "py-2 text-center text-xs font-semibold rounded-lg transition bg-blue-600 text-white shadow";
+            }
+        }
+
+        // Tambah Kendaraan
         function addVehicle(event) {
             event.preventDefault();
             const plateNumber = document.getElementById('plateNumber').value.trim().toUpperCase();
             const vehicleType = document.getElementById('vehicleType').value;
             const ownerNote = document.getElementById('ownerNote').value.trim();
-            const entryTime = new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'medium' });
+            const price = vehicleType === 'Motor' ? 10000 : 20000;
+            const entryTime = new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'medium' });
 
             const newVehicle = {
-                plateNumber: plateNumber,
-                vehicleType: vehicleType,
+                plateNumber,
+                vehicleType,
                 ownerNote: ownerNote || '-',
-                entryTime: entryTime,
+                price,
+                entryTime,
                 position: currentRole,
+                status: 'Dalam',
                 timestamp: Date.now()
             };
 
             parkingRef.push(newVehicle).then(() => {
                 document.getElementById('parkingForm').reset();
                 alert('Kendaraan berhasil dicatat!');
-            }).catch((error) => {
-                alert('Gagal menyimpan: ' + error.message);
+                switchTab('data');
+            }).catch((err) => {
+                alert('Gagal menyimpan: ' + err.message);
             });
         }
 
-        // Ambil dan Pantau Data Secara Real-Time
+        // Realtime Data Listener
         let globalParkingData = [];
         function loadParkingData() {
             parkingRef.on('value', (snapshot) => {
                 const data = snapshot.val();
-                const tbody = document.getElementById('parkingTableBody');
-                tbody.innerHTML = '';
-
                 if (!data) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Belum ada kendaraan terparkir.</td></tr>`;
                     globalParkingData = [];
+                    renderUI([]);
                     return;
                 }
-
                 globalParkingData = Object.entries(data).map(([id, val]) => ({ id, ...val }));
                 globalParkingData.sort((a, b) => b.timestamp - a.timestamp);
-                
-                renderTable(globalParkingData);
+                renderUI(globalParkingData);
             });
         }
 
-        function renderTable(dataList) {
-            const tbody = document.getElementById('parkingTableBody');
-            tbody.innerHTML = '';
+        function renderUI(dataList) {
+            const container = document.getElementById('parkingListContainer');
+            container.innerHTML = '';
+
+            let totalRev = 0;
+            let totalUnit = 0;
 
             if (dataList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Tidak ada kendaraan yang cocok dengan pencarian.</td></tr>`;
+                container.innerHTML = `<p class="text-center text-xs text-slate-500 py-6">Belum ada data kendaraan.</p>`;
+                document.getElementById('totalRevenue').innerText = 'Rp 0';
+                document.getElementById('totalCount').innerText = '0 Unit';
                 return;
             }
 
-            dataList.forEach((item) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition";
-                
-                // Tombol Hapus hanya muncul jika role adalah Super Admin
-                let actionButtonHtml = `<span class="text-xs text-gray-400 italic">Terkunci (Pos)</span>`;
-                if (currentRole === 'Super Admin') {
-                    actionButtonHtml = `
-                        <button onclick="deleteVehicle('${item.id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold shadow transition">
-                            Hapus / Keluar
-                        </button>
-                    `;
+            dataList.forEach(item => {
+                if (item.status === 'Dalam') {
+                    totalRev += Number(item.price);
+                    totalUnit += 1;
                 }
 
-                tr.innerHTML = `
-                    <td class="p-3 font-mono text-xs text-gray-500">${item.entryTime}</td>
-                    <td class="p-3 font-bold text-gray-800">${item.plateNumber}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">${item.vehicleType}</span></td>
-                    <td class="p-3 text-xs text-gray-600">${item.position}</td>
-                    <td class="p-3 text-gray-600">${item.ownerNote}</td>
-                    <td class="p-3 text-center">${actionButtonHtml}</td>
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 p-3.5 rounded-2xl border border-slate-800 flex flex-col gap-2";
+
+                // Tombol Hapus Satuan: HANYA MUNCUL JIKA SUPER ADMIN
+                let deleteButtonHtml = '';
+                if (currentRole === 'Super Admin') {
+                    deleteButtonHtml = `<button onclick="deleteVehicle('${item.id}')" class="text-red-400 hover:text-red-300 text-xs font-semibold">Hapus</button>`;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-white text-sm">${item.plateNumber}</span>
+                                <span class="px-2 py-0.5 bg-blue-950 text-blue-300 border border-blue-800 rounded text-[10px]">${item.position}</span>
+                                <span class="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px]">${item.vehicleType}</span>
+                                <span class="px-2 py-0.5 ${item.status === 'Dalam' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400'} rounded text-[10px]">${item.status}</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">Ket: ${item.ownerNote}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-emerald-400 font-bold text-xs">Rp ${Number(item.price).toLocaleString('id-ID')}</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-800/60 text-[10px] text-slate-400">
+                        <span>🕒 ${item.entryTime}</span>
+                        <div class="flex items-center gap-3">
+                            <button onclick="alert('Cetak ulang tiket untuk ${item.plateNumber}')" class="text-blue-400 hover:text-blue-300 font-semibold">Print</button>
+                            ${deleteButtonHtml}
+                        </div>
+                    </div>
                 `;
-                tbody.appendChild(tr);
+                container.appendChild(card);
             });
+
+            document.getElementById('totalRevenue').innerText = `Rp ${totalRev.toLocaleString('id-ID')}`;
+            document.getElementById('totalCount').innerText = `${totalUnit} Unit`;
         }
 
-        // Filter Pencarian
-        function filterParking() {
-            const keyword = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = globalParkingData.filter(item => 
-                item.plateNumber.toLowerCase().includes(keyword) || 
-                item.ownerNote.toLowerCase().includes(keyword) ||
-                item.vehicleType.toLowerCase().includes(keyword) ||
-                item.position.toLowerCase().includes(keyword)
-            );
-            renderTable(filtered);
-        }
-
-        // Hapus Data Satuan (Super Admin Only)
+        // Hapus Satuan (Super Admin Only)
         function deleteVehicle(id) {
             if (currentRole !== 'Super Admin') {
                 alert('Akses ditolak! Hanya Super Admin yang dapat menghapus data.');
                 return;
             }
-            if (confirm('Apakah Anda yakin ingin menghapus data kendaraan ini?')) {
-                parkingRef.child(id).remove().catch((error) => {
-                    alert('Gagal menghapus: ' + error.message);
-                });
+            if (confirm('Hapus transaksi ini?')) {
+                parkingRef.child(id).remove().catch(err => alert('Gagal: ' + err.message));
             }
         }
 
@@ -279,10 +336,16 @@
             if (confirm('PERINGATAN: Semua data parkir akan dihapus permanen! Lanjutkan?')) {
                 parkingRef.remove().then(() => {
                     alert('Semua data berhasil direset.');
-                }).catch((error) => {
-                    alert('Gagal mereset: ' + error.message);
-                });
+                }).catch(err => alert('Gagal: ' + err.message));
             }
+        }
+
+        function exportExcel() {
+            alert('Fitur Export Excel diaktifkan.');
+        }
+
+        function filterExitList() {
+            // Optional filter for exit tab
         }
 
         loadParkingData();
