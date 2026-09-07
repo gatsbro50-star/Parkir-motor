@@ -25,10 +25,11 @@
             <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Pilih Sesi / Pos Parkir</label>
                 <select id="loginSesi" class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base font-semibold text-white focus:outline-none focus:border-blue-500">
-                    <option value="parkir1">Pos Parkir 1</option>
-                    <option value="parkir2">Pos Parkir 2</option>
-                    <option value="parkir3">Pos Parkir 3</option>
-                    <option value="parkir4">Pos Parkir 4</option>
+                    <option value="parkir1">Pos Parkir 1 (In/Out)</option>
+                    <option value="parkir2">Pos Parkir 2 (In/Out)</option>
+                    <option value="parkir3">Pos Parkir 3 (In/Out)</option>
+                    <option value="parkir4">Pos Parkir 4 (In/Out)</option>
+                    <option value="parkirout">📷 Akun Khusus Parkir Keluar (Out)</option>
                     <option value="superadmin">👑 Super Admin (All Parkir)</option>
                 </select>
             </div>
@@ -122,6 +123,7 @@
                                 <option value="parkir2">Pos Parkir 2</option>
                                 <option value="parkir3">Pos Parkir 3</option>
                                 <option value="parkir4">Pos Parkir 4</option>
+                                <option value="parkirout">Akun Parkir Keluar</option>
                                 <option value="superadmin">Super Admin</option>
                             </select>
                         </div>
@@ -225,6 +227,7 @@
             "parkir2": "123",
             "parkir3": "123",
             "parkir4": "123",
+            "parkirout": "out123",
             "superadmin": "admin123"
         };
         let bluetoothDevice = null, bluetoothCharacteristic = null;
@@ -247,25 +250,24 @@
             }
         }, 3000);
 
-        // Ambil data password dari Firebase secara real-time
         database.ref('settings/passwords').on('value', (snapshot) => {
             if (snapshot.exists()) {
                 dbPasswords = snapshot.val();
             } else {
-                // Inisialisasi default ke firebase jika belum ada
                 database.ref('settings/passwords').set(dbPasswords);
             }
         });
 
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
-            let refPath = currentSesi === 'superadmin' ? 'parkir_data' : `parkir_data/${currentSesi}`;
+            // Jika akun parkir keluar, tarik data global dari seluruh pos agar bisa discan keluar
+            let refPath = (currentSesi === 'superadmin' || currentSesi === 'parkirout') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 let gabungan = [];
                 if (snapshot.exists()) {
                     let val = snapshot.val();
-                    if (currentSesi === 'superadmin') {
+                    if (currentSesi === 'superadmin' || currentSesi === 'parkirout') {
                         Object.keys(val).forEach(posKey => {
                             if (val[posKey] && typeof val[posKey] === 'object') {
                                 Object.values(val[posKey]).forEach(item => {
@@ -293,8 +295,7 @@
             let sesi = document.getElementById('loginSesi').value;
             let pass = document.getElementById('loginPassword').value;
             
-            // Validasi ketat berdasarkan database password yang aktif
-            let correctPass = dbPasswords[sesi] || (sesi === 'superadmin' ? 'admin123' : '123');
+            let correctPass = dbPasswords[sesi] || (sesi === 'superadmin' ? 'admin123' : (sesi === 'parkirout' ? 'out123' : '123'));
             
             if (pass !== correctPass) {
                 return alert("Password salah!");
@@ -322,19 +323,31 @@
             let badge = document.getElementById('badgeSesi');
             let btnResetContainer = document.getElementById('btnResetDataContainer');
             let panelGantiPassword = document.getElementById('panelGantiPassword');
+            let navTabsContainer = document.getElementById('navTabsContainer');
 
             if (sesi === 'superadmin') {
                 badge.innerText = "👑 Super Admin";
                 badge.className = "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
                 if (btnResetContainer) btnResetContainer.classList.remove('hidden');
                 if (panelGantiPassword) panelGantiPassword.classList.remove('hidden');
+                navTabsContainer.style.display = "flex";
+                switchTab(1);
+            } else if (sesi === 'parkirout') {
+                badge.innerText = "📷 Pos Parkir Keluar (OUT)";
+                badge.className = "text-[10px] bg-red-900 text-red-200 px-2 py-0.5 rounded-full font-bold";
+                if (btnResetContainer) btnResetContainer.classList.add('hidden');
+                if (panelGantiPassword) panelGantiPassword.classList.add('hidden');
+                // Sembunyikan tab input & rekap, langsung kunci ke Halaman 3 (Keluar)
+                navTabsContainer.style.display = "none";
+                switchTab(3);
             } else {
                 badge.innerText = `Pos Parkir ${sesi.replace('parkir', '')}`;
                 badge.className = "text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold";
                 if (btnResetContainer) btnResetContainer.classList.add('hidden');
                 if (panelGantiPassword) panelGantiPassword.classList.add('hidden');
+                navTabsContainer.style.display = "flex";
+                switchTab(1);
             }
-            switchTab(1);
             initRealtimeDataListener();
         }
 
@@ -350,14 +363,20 @@
         }
 
         function switchTab(p) {
+            // Jika akun khusus parkir keluar, cegah berpindah ke halaman lain selain halaman 3
+            if (currentSesi === 'parkirout' && p !== 3) p = 3;
+
             document.getElementById('page1').classList.toggle('hidden', p !== 1);
             document.getElementById('page2').classList.toggle('hidden', p !== 2);
             document.getElementById('page3').classList.toggle('hidden', p !== 3);
             
             ['tabBtn1', 'tabBtn2', 'tabBtn3'].forEach((id, idx) => {
-                document.getElementById(id).className = (p === idx + 1) 
-                    ? "flex-1 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white transition" 
-                    : "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-white transition";
+                let el = document.getElementById(id);
+                if(el) {
+                    el.className = (p === idx + 1) 
+                        ? "flex-1 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white transition" 
+                        : "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-white transition";
+                }
             });
             if (p !== 3) stopCamera();
         }
@@ -415,36 +434,47 @@
             });
         }
 
-        async function executePrintStruk() {
-            closeModalPreview();
-            if (!currentPreviewData) return;
-            if (!bluetoothCharacteristic) {
-                return alert("Printer belum terhubung! Silakan klik tombol 'Printer' di pojok kanan atas.");
+        function render() {
+            if(currentSesi && currentSesi !== 'parkirout') localStorage.setItem(`backup_parkir_${currentSesi}`, JSON.stringify(dataMasuk));
+
+            let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + curr.biaya, 0);
+            let elJumlah = document.getElementById('jumlahMasuk');
+            let elTotal = document.getElementById('totalPendapatan');
+            if(elJumlah) elJumlah.innerText = dataMasuk.length + " Unit";
+            if(elTotal) elTotal.innerText = `Rp ${totalPendapatan.toLocaleString('id-ID')}`;
+            
+            let list = document.getElementById('listMasuk');
+            if(!list) return;
+
+            if (!dataMasuk.length) {
+                list.innerHTML = `<p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Belum ada data kendaraan.</p>`;
+                return;
             }
-            try {
-                let enc = new TextEncoder();
-                let qrBitmap = await createQrBitmap(`PARKIR-${currentPreviewData.plat}-${currentPreviewData.id}`);
-                let parts = [
-                    new Uint8Array([0x1B, 0x40, 0x1B, 0x61, 0x01, 0x1B, 0x45, 0x01]),
-                    enc.encode("PANITIA PARKIR KARNAVAL\n"),
-                    new Uint8Array([0x1B, 0x45, 0x00]),
-                    enc.encode("--------------------------------\n"),
-                    new Uint8Array([0x1D, 0x21, 0x11]),
-                    enc.encode(`\n${currentPreviewData.plat}\n\n`),
-                    new Uint8Array([0x1D, 0x21, 0x00]),
-                    enc.encode(`Pos    : ${currentPreviewData.posAsal}\nJenis  : ${currentPreviewData.jenis}\nMasuk  : ${currentPreviewData.waktu}\nBayar  : Rp ${currentPreviewData.biaya.toLocaleString('id-ID')}\nStatus : ${currentPreviewData.status}\n--------------------------------\n`),
-                    qrBitmap || new Uint8Array(0),
-                    enc.encode("\nStruk hilang tunjuk kan STNK/no.RANGKA sesuai tiket parkir/tunggu parkir sampai akhir\nTERIMAKASIH\n\n\n")
-                ];
-                let totalLength = parts.reduce((a, b) => a + b.length, 0);
-                let fullBuffer = new Uint8Array(totalLength);
-                let offset = 0;
-                parts.forEach(p => { fullBuffer.set(p, offset); offset += p.length; });
-                await sendToPrinter(fullBuffer);
-                showToast("Struk Berhasil Dicetak Ulang");
-            } catch (e) { 
-                alert("Gagal cetak struk: " + e.message + "\nCoba matikan lalu nyalakan ulang bluetooth HP."); 
-            }
+            
+            list.innerHTML = '';
+            dataMasuk.forEach(r => {
+                let statusBadge = r.status === 'Keluar' ? '<span class="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded">Keluar</span>' : '<span class="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded">Di Dalam</span>';
+                
+                let deleteButtonHtml = '';
+                if (currentSesi === 'superadmin') {
+                    deleteButtonHtml = `<button onclick="hapusData(${r.id})" class="text-xs text-red-400 underline">Hapus</button>`;
+                }
+
+                list.innerHTML += `
+                    <div class="bg-gray-800 p-3.5 rounded-xl border border-gray-700 flex justify-between items-center text-sm">
+                        <div>
+                            <div class="font-extrabold text-white">${r.plat} <span class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded font-bold">${r.posAsal}</span> <span class="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">${r.jenis}</span> ${statusBadge}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">🕒 ${r.waktu}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-extrabold text-green-400">Rp ${r.biaya.toLocaleString('id-ID')}</div>
+                            <div class="flex gap-2 justify-end mt-1">
+                                <button onclick="rePrintStruk(${r.id})" class="text-xs text-blue-400 font-semibold underline bg-blue-950/40 px-2 py-0.5 rounded">🖨️ Print</button>
+                                ${deleteButtonHtml}
+                            </div>
+                        </div>
+                    </div>`;
+            });
         }
 
         function rePrintStruk(id) {
@@ -490,9 +520,43 @@
             document.getElementById('modalPreviewStruk').classList.add('hidden');
         }
 
-        document.getElementById('btnExecutePrint').onclick = executePrintStruk;
+        async function executePrintStruk() {
+            closeModalPreview();
+            if (!currentPreviewData) return;
+            if (!bluetoothCharacteristic) {
+                return alert("Printer belum terhubung! Silakan klik tombol 'Printer' di pojok kanan atas.");
+            }
+            try {
+                let enc = new TextEncoder();
+                let qrBitmap = await createQrBitmap(`PARKIR-${currentPreviewData.plat}-${currentPreviewData.id}`);
+                let parts = [
+                    new Uint8Array([0x1B, 0x40, 0x1B, 0x61, 0x01, 0x1B, 0x45, 0x01]),
+                    enc.encode("PANITIA PARKIR KARNAVAL\n"),
+                    new Uint8Array([0x1B, 0x45, 0x00]),
+                    enc.encode("--------------------------------\n"),
+                    new Uint8Array([0x1D, 0x21, 0x11]),
+                    enc.encode(`\n${currentPreviewData.plat}\n\n`),
+                    new Uint8Array([0x1D, 0x21, 0x00]),
+                    enc.encode(`Pos    : ${currentPreviewData.posAsal}\nJenis  : ${currentPreviewData.jenis}\nMasuk  : ${currentPreviewData.waktu}\nBayar  : Rp ${currentPreviewData.biaya.toLocaleString('id-ID')}\nStatus : ${currentPreviewData.status}\n--------------------------------\n`),
+                    qrBitmap || new Uint8Array(0),
+                    enc.encode("\nStruk hilang tunjuk kan STNK/no.RANGKA sesuai tiket parkir/tunggu parkir sampai akhir\nTERIMAKASIH\n\n\n")
+                ];
+                let totalLength = parts.reduce((a, b) => a + b.length, 0);
+                let fullBuffer = new Uint8Array(totalLength);
+                let offset = 0;
+                parts.forEach(p => { fullBuffer.set(p, offset); offset += p.length; });
+                await sendToPrinter(fullBuffer);
+                showToast("Struk Berhasil Dicetak Ulang");
+            } catch (e) { 
+                alert("Gagal cetak struk: " + e.message); 
+            }
+        }
+        
+        let btnExec = document.getElementById('btnExecutePrint');
+        if(btnExec) btnExec.onclick = executePrintStruk;
 
         function simpanDanCetak() {
+            if (currentSesi === 'parkirout') return alert("Akses ditolak! Akun ini khusus untuk parkir keluar.");
             const platInput = document.getElementById('platNomor');
             const plat = platInput.value.trim().toUpperCase();
             if (!plat) return alert("Nomor plat tidak boleh kosong!");
@@ -502,7 +566,7 @@
             const id = Date.now();
             
             let activeSesi = currentSesi || localStorage.getItem('parkir_active_sesi');
-            let targetPos = (activeSesi && activeSesi !== 'superadmin') ? activeSesi : 'parkir1';
+            let targetPos = (activeSesi && activeSesi !== 'superadmin' && activeSesi !== 'parkirout') ? activeSesi : 'parkir1';
 
             const item = {
                 id: id,
@@ -558,45 +622,6 @@
             }
         }
 
-        function render() {
-            if(currentSesi) localStorage.setItem(`backup_parkir_${currentSesi}`, JSON.stringify(dataMasuk));
-
-            let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + curr.biaya, 0);
-            document.getElementById('jumlahMasuk').innerText = dataMasuk.length + " Unit";
-            document.getElementById('totalPendapatan').innerText = `Rp ${totalPendapatan.toLocaleString('id-ID')}`;
-            
-            let list = document.getElementById('listMasuk');
-            if (!dataMasuk.length) {
-                list.innerHTML = `<p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Belum ada data kendaraan.</p>`;
-                return;
-            }
-            
-            list.innerHTML = '';
-            dataMasuk.forEach(r => {
-                let statusBadge = r.status === 'Keluar' ? '<span class="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded">Keluar</span>' : '<span class="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded">Di Dalam</span>';
-                
-                let deleteButtonHtml = '';
-                if (currentSesi === 'superadmin') {
-                    deleteButtonHtml = `<button onclick="hapusData(${r.id})" class="text-xs text-red-400 underline">Hapus</button>`;
-                }
-
-                list.innerHTML += `
-                    <div class="bg-gray-800 p-3.5 rounded-xl border border-gray-700 flex justify-between items-center text-sm">
-                        <div>
-                            <div class="font-extrabold text-white">${r.plat} <span class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded font-bold">${r.posAsal}</span> <span class="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">${r.jenis}</span> ${statusBadge}</div>
-                            <div class="text-xs text-gray-400 mt-0.5">🕒 ${r.waktu}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-extrabold text-green-400">Rp ${r.biaya.toLocaleString('id-ID')}</div>
-                            <div class="flex gap-2 justify-end mt-1">
-                                <button onclick="rePrintStruk(${r.id})" class="text-xs text-blue-400 font-semibold underline bg-blue-950/40 px-2 py-0.5 rounded">🖨️ Print</button>
-                                ${deleteButtonHtml}
-                            </div>
-                        </div>
-                    </div>`;
-            });
-        }
-
         function mulaiScan() {
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             
@@ -610,7 +635,7 @@
                         if (found.status === 'Keluar') return alert("Sudah keluar!");
                         stopCamera();
                         bukaModalKeluar(found.id);
-                    } else { alert("Barcode tidak terdaftar!"); }
+                    } else { alert("Barcode tidak terdaftar / berasal dari pos lain!"); }
                 }
             ).then(() => {
                 document.getElementById('btnStartCam').classList.add('hidden');
@@ -637,7 +662,7 @@
                     btnFlash.className = "text-xs text-yellow-400 font-semibold underline";
                 }
             } catch (err) {
-                alert("Lampu flash tidak didukung di perangkat/browser ini: " + err.message);
+                alert("Lampu flash tidak didukung: " + err.message);
                 isFlashOn = false;
             }
         }
@@ -682,7 +707,7 @@
         }
 
         function hapusData(id) {
-            if (currentSesi !== 'superadmin') return alert("Akses ditolak! Hanya Super Admin yang dapat menghapus data.");
+            if (currentSesi !== 'superadmin') return alert("Akses ditolak!");
             let d = dataMasuk.find(x => x.id === id);
             let posKey = d.posAsal.toLowerCase().replace('pos ', 'parkir').trim();
             if (confirm("Hapus data ini?")) {
@@ -692,8 +717,8 @@
         }
 
         function resetSemuaData() {
-            if (currentSesi !== 'superadmin') return alert("Akses ditolak! Hanya Super Admin yang dapat mereset data.");
-            if (confirm("PERINGATAN: Kosongkan SELURUH data transaksi di Pos 1 sampai Pos 4 secara permanen?")) {
+            if (currentSesi !== 'superadmin') return alert("Akses ditolak!");
+            if (confirm("PERINGATAN: Kosongkan SELURUH data transaksi?")) {
                 dataMasuk = []; render();
                 database.ref(`parkir_data`).remove();
                 localStorage.clear();
@@ -708,6 +733,7 @@
             if (!newPass) return alert("Password baru tidak boleh kosong!");
 
             database.ref(`settings/passwords/${target}`).set(newPass).then(() => {
+                dbPasswords[target] = newPass;
                 document.getElementById('inputPasswordBaru').value = '';
                 showToast(`Password ${target} berhasil diubah!`);
             }).catch(err => {
