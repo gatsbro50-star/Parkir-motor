@@ -124,6 +124,7 @@
                     <div class="flex justify-between items-center">
                         <h2 class="text-xs font-bold text-red-400 uppercase">Scan Barcode Keluar</h2>
                         <div class="flex gap-2 items-center">
+                            <!-- Tombol lampu dibuat selalu tampil begitu kamera dinyalakan -->
                             <button onclick="toggleFlashlight()" id="btnFlash" class="text-xs text-yellow-400 font-semibold underline hidden">💡 Lampu</button>
                             <button onclick="stopCamera()" id="btnStopCam" class="text-xs text-gray-400 underline hidden">Matikan</button>
                         </div>
@@ -166,10 +167,7 @@
                 <button onclick="closeModalPreview()" class="text-gray-400 font-bold text-lg">&times;</button>
             </div>
             
-            <!-- Tampilan Kertas Struk -->
-            <div id="previewReceiptContent" class="bg-white text-black font-mono text-xs p-4 rounded-xl shadow-inner space-y-1 text-center">
-                <!-- Diisi via Javascript -->
-            </div>
+            <div id="previewReceiptContent" class="bg-white text-black font-mono text-xs p-4 rounded-xl shadow-inner space-y-1 text-center"></div>
 
             <div class="flex gap-2">
                 <button id="btnExecutePrint" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl text-xs shadow transition flex items-center justify-center gap-1">
@@ -225,7 +223,6 @@
             if (snapshot.exists()) dbPasswords = snapshot.val();
         });
 
-        // LISTENER: Jika Super Admin, otomatis gabungkan data dari parkir1, parkir2, parkir3, parkir4
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
             let refPath = currentSesi === 'superadmin' ? 'parkir_data' : `parkir_data/${currentSesi}`;
@@ -317,7 +314,6 @@
             if (p !== 3) stopCamera();
         }
 
-        // --- BLUETOOTH PRINTER ---
         async function connectBluetooth() {
             try {
                 document.getElementById('statusPrinter').innerText = "Mencari...";
@@ -482,20 +478,13 @@
             currentPreviewData = item;
             executePrintStrukDirect();
 
-            database.ref(`parkir_data/${targetPos}/${id}`).set(item)
-                .then(() => {
-                    console.log("Berhasil tersimpan ke path: parkir_data/" + targetPos + "/" + id);
-                })
-                .catch(e => {
-                    console.error("Firebase Error:", e);
-                    alert("Gagal kirim ke database: " + e.message + "\nCek kembali Rules Firebase Anda!");
-                });
+            database.ref(`parkir_data/${targetPos}/${id}`).set(item).catch(e => {
+                console.error("Firebase Error:", e);
+            });
         }
 
         async function executePrintStrukDirect() {
-            if (!bluetoothCharacteristic) {
-                return;
-            }
+            if (!bluetoothCharacteristic) return;
             try {
                 let enc = new TextEncoder();
                 let qrBitmap = await createQrBitmap(`PARKIR-${currentPreviewData.plat}-${currentPreviewData.id}`);
@@ -573,10 +562,8 @@
                 document.getElementById('btnStartCam').classList.add('hidden');
                 document.getElementById('btnStopCam').classList.remove('hidden');
                 
-                let capabilities = html5QrCode.getRunningTrackCameraCapabilities();
-                if (capabilities && capabilities.torchSupported) {
-                    document.getElementById('btnFlash').classList.remove('hidden');
-                }
+                // Tombol lampu langsung dipaksa tampil agar bisa diklik tanpa menunggu sensor terbaca
+                document.getElementById('btnFlash').classList.remove('hidden');
             }).catch(err => {
                 alert("Gagal membuka kamera: " + err);
             });
@@ -598,7 +585,8 @@
                     btnFlash.className = "text-xs text-yellow-400 font-semibold underline";
                 }
             } catch (err) {
-                alert("Perangkat atau browser tidak mendukung kontrol lampu flash: " + err.message);
+                alert("Lampu flash tidak didukung di perangkat/browser ini: " + err.message);
+                isFlashOn = false;
             }
         }
 
