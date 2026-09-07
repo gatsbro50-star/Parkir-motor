@@ -111,6 +111,28 @@
                     <button id="btnResetDataContainer" onclick="resetSemuaData()" class="bg-red-900/60 hover:bg-red-900 border border-red-700 text-red-200 font-bold rounded-xl text-xs px-4 py-3 shadow transition hidden">🗑️ Reset Data</button>
                 </div>
 
+                <!-- Panel Ganti Password (Hanya untuk Super Admin) -->
+                <div id="panelGantiPassword" class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3 hidden">
+                    <h2 class="text-xs font-bold text-purple-400 uppercase">🔐 Pengaturan Password Akses</h2>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase mb-1">Target Sesi</label>
+                            <select id="targetSesiPass" class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white">
+                                <option value="parkir1">Pos Parkir 1</option>
+                                <option value="parkir2">Pos Parkir 2</option>
+                                <option value="parkir3">Pos Parkir 3</option>
+                                <option value="parkir4">Pos Parkir 4</option>
+                                <option value="superadmin">Super Admin</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase mb-1">Password Baru</label>
+                            <input type="text" id="inputPasswordBaru" placeholder="Baru..." class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white">
+                        </div>
+                    </div>
+                    <button onclick="simpanPasswordBaru()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 rounded-xl text-xs shadow transition">Simpan Password Baru</button>
+                </div>
+
                 <div>
                     <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">Riwayat Kendaraan (Bisa Re-Print)</h2>
                     <div id="listMasuk" class="space-y-2 max-h-[350px] overflow-y-auto">
@@ -258,7 +280,8 @@
         function prosesLogin() {
             let sesi = document.getElementById('loginSesi').value;
             let pass = document.getElementById('loginPassword').value;
-            if (pass !== (dbPasswords[sesi] || "123") && pass !== "admin123") return alert("Password salah!");
+            let actualPass = dbPasswords[sesi] || (sesi === 'superadmin' ? 'admin123' : '123');
+            if (pass !== actualPass && pass !== "admin123") return alert("Password salah!");
             currentSesi = sesi;
             localStorage.setItem('parkir_active_sesi', sesi);
             bukaAplikasi(sesi);
@@ -280,15 +303,18 @@
 
             let badge = document.getElementById('badgeSesi');
             let btnResetContainer = document.getElementById('btnResetDataContainer');
+            let panelGantiPassword = document.getElementById('panelGantiPassword');
 
             if (sesi === 'superadmin') {
                 badge.innerText = "👑 Super Admin";
                 badge.className = "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
-                if (btnResetContainer) btnResetContainer.classList.remove('hidden'); // Munculkan tombol reset untuk superadmin
+                if (btnResetContainer) btnResetContainer.classList.remove('hidden');
+                if (panelGantiPassword) panelGantiPassword.classList.remove('hidden');
             } else {
                 badge.innerText = `Pos Parkir ${sesi.replace('parkir', '')}`;
                 badge.className = "text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold";
-                if (btnResetContainer) btnResetContainer.classList.add('hidden'); // Sembunyikan untuk pos parkir 1-4
+                if (btnResetContainer) btnResetContainer.classList.add('hidden');
+                if (panelGantiPassword) panelGantiPassword.classList.add('hidden');
             }
             switchTab(1);
             initRealtimeDataListener();
@@ -531,7 +557,6 @@
             dataMasuk.forEach(r => {
                 let statusBadge = r.status === 'Keluar' ? '<span class="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded">Keluar</span>' : '<span class="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded">Di Dalam</span>';
                 
-                // Tombol Hapus per Transaksi: Hanya muncul jika Super Admin
                 let deleteButtonHtml = '';
                 if (currentSesi === 'superadmin') {
                     deleteButtonHtml = `<button onclick="hapusData(${r.id})" class="text-xs text-red-400 underline">Hapus</button>`;
@@ -652,10 +677,24 @@
             if (currentSesi !== 'superadmin') return alert("Akses ditolak! Hanya Super Admin yang dapat mereset data.");
             if (confirm("PERINGATAN: Kosongkan SELURUH data transaksi di Pos 1 sampai Pos 4 secara permanen?")) {
                 dataMasuk = []; render();
-                database.ref(`parkir_data`).remove(); // Menghapus seluruh node parkir_data di database (Pos 1-4 bersih total)
+                database.ref(`parkir_data`).remove();
                 localStorage.clear();
                 showToast("Semua data berhasil direset!");
             }
+        }
+
+        function simpanPasswordBaru() {
+            if (currentSesi !== 'superadmin') return alert("Akses ditolak!");
+            let target = document.getElementById('targetSesiPass').value;
+            let newPass = document.getElementById('inputPasswordBaru').value.trim();
+            if (!newPass) return alert("Password baru tidak boleh kosong!");
+
+            database.ref(`settings/passwords/${target}`).set(newPass).then(() => {
+                document.getElementById('inputPasswordBaru').value = '';
+                showToast(`Password ${target} berhasil diubah!`);
+            }).catch(err => {
+                alert("Gagal mengubah password: " + err.message);
+            });
         }
 
         function exportToExcel() {
