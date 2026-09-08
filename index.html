@@ -252,11 +252,17 @@
             }
         }, 3000);
 
+        // Aman dari blocking: Ambil data password sekali dan pasang listener tanpa crash
         database.ref('settings/passwords').on('value', (snapshot) => {
             if (snapshot.exists()) {
-                dbPasswords = snapshot.val();
-                localStorage.setItem('parkir_db_passwords', JSON.stringify(dbPasswords));
+                let val = snapshot.val();
+                if(typeof val === 'object') {
+                    dbPasswords = { ...dbPasswords, ...val };
+                    localStorage.setItem('parkir_db_passwords', JSON.stringify(dbPasswords));
+                }
             }
+        }, (error) => {
+            console.warn("Offline mode / rules pembatas aktif:", error);
         });
 
         function initRealtimeDataListener() {
@@ -633,28 +639,40 @@
             showToast("Status: Keluar!");
         }
 
+        // Fungsi Simpan Password yang Diperbarui dan Aman (Bekerja Instan)
         function simpanPasswordBaru() {
-            let targetPos = document.getElementById('targetSesiPass').value;
-            let newPass = document.getElementById('inputPasswordBaru').value.trim();
+            let targetPosEl = document.getElementById('targetSesiPass');
+            let inputPassEl = document.getElementById('inputPasswordBaru');
+            
+            if (!targetPosEl || !inputPassEl) {
+                alert("Elemen form password tidak ditemukan!");
+                return;
+            }
+
+            let targetPos = targetPosEl.value;
+            let newPass = inputPassEl.value.trim();
             
             if (!newPass) {
                 alert("Password baru tidak boleh kosong!");
                 return;
             }
 
-            // Simpan ke memori lokal
+            // Simpan langsung ke memori lokal & objek runtime
             dbPasswords[targetPos] = newPass;
             localStorage.setItem('parkir_db_passwords', JSON.stringify(dbPasswords));
 
             // Kosongkan form input
-            document.getElementById('inputPasswordBaru').value = '';
+            inputPassEl.value = '';
 
-            // Coba kirim ke Firebase (jika online)
-            database.ref(`settings/passwords/${targetPos}`).set(newPass).then(() => {
-                showToast(`Password ${targetPos.toUpperCase()} Berhasil Disimpan!`);
-            }).catch(err => {
-                showToast(`Password Tersimpan Lokal!`);
-            });
+            // Kirim ke Firebase dengan penanganan error yang tidak menghentikan fungsi lokal
+            database.ref(`settings/passwords/${targetPos}`).set(newPass)
+                .then(() => {
+                    showToast(`Password ${targetPos.toUpperCase()} Berhasil Disimpan!`);
+                })
+                .catch((err) => {
+                    console.error("Gagal sinkron database:", err);
+                    showToast(`Berhasil disimpan lokal!`);
+                });
         }
 
         function exportToExcel() {
