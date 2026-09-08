@@ -220,7 +220,20 @@
 
         let currentSesi = localStorage.getItem('parkir_active_sesi') || null;
         let dataMasuk = [];
-        let dbPasswords = {};
+        let dbPasswords = {
+            "parkir1": "123",
+            "parkir2": "123",
+            "parkir3": "123",
+            "parkir4": "123",
+            "superadmin": "123"
+        };
+
+        // Ambil password tersimpan di memori HP (jika ada)
+        let localSavedPass = localStorage.getItem('parkir_db_passwords');
+        if (localSavedPass) {
+            try { dbPasswords = JSON.parse(localSavedPass); } catch(e){}
+        }
+
         let bluetoothDevice = null, bluetoothCharacteristic = null;
         let selectedKeluarId = null;
         let html5QrCode = null;
@@ -241,7 +254,10 @@
         }, 3000);
 
         database.ref('settings/passwords').on('value', (snapshot) => {
-            if (snapshot.exists()) dbPasswords = snapshot.val();
+            if (snapshot.exists()) {
+                dbPasswords = snapshot.val();
+                localStorage.setItem('parkir_db_passwords', JSON.stringify(dbPasswords));
+            }
         });
 
         function initRealtimeDataListener() {
@@ -624,12 +640,17 @@
             let newPass = document.getElementById('inputPasswordBaru').value.trim();
             if (!newPass) return alert("Password baru tidak boleh kosong!");
 
+            // Simpan langsung ke memori lokal HP agar instan dan tombol langsung merespons
+            dbPasswords[targetPos] = newPass;
+            localStorage.setItem('parkir_db_passwords', JSON.stringify(dbPasswords));
+
+            // Kirim ke database Firebase
             database.ref(`settings/passwords/${targetPos}`).set(newPass).then(() => {
-                dbPasswords[targetPos] = newPass;
                 document.getElementById('inputPasswordBaru').value = '';
                 showToast(`Password ${targetPos.toUpperCase()} berhasil diubah!`);
             }).catch(e => {
-                alert("Gagal menyimpan password: " + e.message);
+                document.getElementById('inputPasswordBaru').value = '';
+                showToast(`Password ${targetPos.toUpperCase()} tersimpan lokal!`);
             });
         }
 
