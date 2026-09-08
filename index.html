@@ -279,7 +279,6 @@
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
             
-            // Tentukan jalur path Firebase berdasarkan sesi login aktif
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
@@ -287,7 +286,6 @@
                 if (snapshot.exists()) {
                     let val = snapshot.val();
                     if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                        // Super Admin & Pos Keluar menggabungkan semua data pos
                         Object.keys(val).forEach(posKey => {
                             if (val[posKey] && typeof val[posKey] === 'object') {
                                 Object.values(val[posKey]).forEach(item => {
@@ -296,7 +294,7 @@
                             }
                         });
                     } else {
-                        // Pos 1, 2, 3, 4 murni HANYA mengambil data dari posnya sendiri saja
+                        // PERBAIKAN UTAMA: HANYA ambil data object langsung dari snapshot pos tersebut
                         if (val && typeof val === 'object') {
                             Object.values(val).forEach(item => {
                                 if (item && typeof item === 'object') gabungan.push(item);
@@ -306,6 +304,11 @@
                 }
                 gabungan.sort((a, b) => b.id - a.id);
                 dataMasuk = gabungan;
+                
+                // Paksa perbarui backup lokal khusus pos ini agar bersih dari data pos lain
+                if (currentSesi) {
+                    localStorage.setItem(`backup_parkir_${currentSesi}`, JSON.stringify(dataMasuk));
+                }
                 render();
             });
         }
@@ -581,7 +584,9 @@
         }
 
         function render() {
-            localStorage.setItem(`backup_parkir_${currentSesi || 'superadmin'}`, JSON.stringify(dataMasuk));
+            if(currentSesi) {
+                localStorage.setItem(`backup_parkir_${currentSesi}`, JSON.stringify(dataMasuk));
+            }
 
             let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + curr.biaya, 0);
             let elJml = document.getElementById('jumlahMasuk');
