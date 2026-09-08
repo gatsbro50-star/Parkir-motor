@@ -143,7 +143,7 @@
                 </div>
 
                 <div>
-                    <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">Riwayat Kendaraan (Bisa Re-Print / Hapus)</h2>
+                    <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">Riwayat Kendaraan (Re-Print)</h2>
                     <div id="listMasuk" class="space-y-2 max-h-[350px] overflow-y-auto">
                         <p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Memuat data...</p>
                     </div>
@@ -585,8 +585,8 @@
             dataMasuk.forEach(r => {
                 let statusBadge = r.status === 'Keluar' ? '<span class="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded">Keluar</span>' : '<span class="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded">Di Dalam</span>';
                 
-                // Tombol Hapus hanya muncul jika superadmin atau pos asalnya sesuai
-                let btnHapusHtml = (currentSesi === 'superadmin' || currentSesi === r.posAsal.toLowerCase().replace('pos ', 'parkir').trim()) 
+                // Tombol Hapus HANYA muncul jika login sebagai 'superadmin'. Untuk pos 1-4, tombol hapus tidak ditampilkan.
+                let btnHapusHtml = (currentSesi === 'superadmin') 
                     ? `<button onclick="hapusTransaksi(${r.id}, '${r.posAsal}')" class="bg-red-900/60 hover:bg-red-800 text-red-200 text-[10px] px-2 py-1.5 rounded-lg font-bold shadow transition" title="Hapus Transaksi">🗑️</button>` 
                     : '';
 
