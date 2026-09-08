@@ -252,7 +252,7 @@
             }
         }, 3000);
 
-        // Aman dari blocking: Ambil data password sekali dan pasang listener tanpa crash
+        // Sinkronisasi data password dari Firebase (jika ada update dari perangkat lain)
         database.ref('settings/passwords').on('value', (snapshot) => {
             if (snapshot.exists()) {
                 let val = snapshot.val();
@@ -300,8 +300,15 @@
         function prosesLogin() {
             let sesi = document.getElementById('loginSesi').value;
             let pass = document.getElementById('loginPassword').value;
+            
+            // Ambil password yang aktif saat ini dari database lokal
             let defaultPass = dbPasswords[sesi] || "123";
-            if (pass !== defaultPass && pass !== "admin123") return alert("Password salah!");
+
+            // Validasi murni tanpa ada password universal cadangan
+            if (pass !== defaultPass) {
+                return alert("Password salah!");
+            }
+
             currentSesi = sesi;
             localStorage.setItem('parkir_active_sesi', sesi);
             bukaAplikasi(sesi);
@@ -324,6 +331,7 @@
             let badge = document.getElementById('badgeSesi');
             let panelSuperAdmin = document.getElementById('panelSuperAdmin');
 
+            // Panel Super Admin dijamin mutlak hanya muncul jika akun yang login adalah superadmin
             if (sesi === 'superadmin') {
                 badge.innerText = "👑 Super Admin";
                 badge.className = "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
@@ -639,15 +647,18 @@
             showToast("Status: Keluar!");
         }
 
-        // Fungsi Simpan Password yang Diperbarui dan Aman (Bekerja Instan)
+        // Fitur Ubah Password: Khusus Super Admin & Password Lama Otomatis Mati
         function simpanPasswordBaru() {
+            // Validasi pengaman ketat: hanya superadmin yang diizinkan mengubah
+            if (currentSesi !== 'superadmin') {
+                alert("Akses ditolak! Fitur ini khusus Super Admin.");
+                return;
+            }
+
             let targetPosEl = document.getElementById('targetSesiPass');
             let inputPassEl = document.getElementById('inputPasswordBaru');
             
-            if (!targetPosEl || !inputPassEl) {
-                alert("Elemen form password tidak ditemukan!");
-                return;
-            }
+            if (!targetPosEl || !inputPassEl) return;
 
             let targetPos = targetPosEl.value;
             let newPass = inputPassEl.value.trim();
@@ -657,21 +668,20 @@
                 return;
             }
 
-            // Simpan langsung ke memori lokal & objek runtime
+            // Timpa nilai lama secara total (password lama otomatis mati)
             dbPasswords[targetPos] = newPass;
             localStorage.setItem('parkir_db_passwords', JSON.stringify(dbPasswords));
 
-            // Kosongkan form input
             inputPassEl.value = '';
 
-            // Kirim ke Firebase dengan penanganan error yang tidak menghentikan fungsi lokal
+            // Sinkronkan ke Firebase Realtime Database
             database.ref(`settings/passwords/${targetPos}`).set(newPass)
                 .then(() => {
-                    showToast(`Password ${targetPos.toUpperCase()} Berhasil Disimpan!`);
+                    showToast(`Password ${targetPos.toUpperCase()} Berhasil Diperbarui!`);
                 })
                 .catch((err) => {
                     console.error("Gagal sinkron database:", err);
-                    showToast(`Berhasil disimpan lokal!`);
+                    showToast(`Password berhasil diubah secara lokal!`);
                 });
         }
 
