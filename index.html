@@ -147,6 +147,7 @@
                     <div class="flex justify-between items-center">
                         <h2 class="text-xs font-bold text-red-400 uppercase">Scan Barcode Keluar</h2>
                         <div class="flex gap-2 items-center">
+                            <button onclick="toggleTorch()" id="btnTorch" class="text-xs bg-gray-700 hover:bg-gray-600 px-2.5 py-1.5 rounded-lg font-semibold text-yellow-300 hidden">🔦 Senter: OFF</button>
                             <button onclick="stopCamera()" id="btnStopCam" class="text-xs text-gray-400 underline hidden">Matikan</button>
                         </div>
                     </div>
@@ -238,6 +239,7 @@
         let html5QrCode = null;
         let activeListener = null;
         let currentPreviewData = null;
+        let torchOn = false;
         const tarif = { "Motor": 10000, "Mobil": 25000 };
 
         setTimeout(() => {
@@ -266,7 +268,6 @@
 
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
-            // Jika login poskeluar, tarik data keseluruhan pos agar bisa menscan semua karcis dari pos mana pun
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
@@ -339,8 +340,8 @@
                 badge.innerText = "🚪 Pos Keluar";
                 badge.className = "text-[10px] bg-red-900 text-red-200 px-2 py-0.5 rounded-full font-bold";
                 panelSuperAdmin.classList.add('hidden');
-                navTabs.classList.add('hidden'); // Sembunyikan tab navigasi agar hanya muncul halaman 3 saja
-                switchTab(3); // Langsung arahkan ke halaman 3 (Keluar/Scan)
+                navTabs.classList.add('hidden');
+                switchTab(3);
             } else {
                 badge.innerText = `Pos Parkir ${sesi.replace('parkir', '')}`;
                 badge.className = "text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold";
@@ -376,7 +377,7 @@
                 }
             });
             if (p !== 3) stopCamera();
-            if (p === 3) setTimeout(mulaiScan, 300); // Otomatis aktifkan kamera saat masuk tab 3 / pos keluar
+            if (p === 3) setTimeout(mulaiScan, 300);
         }
 
         // --- BLUETOOTH PRINTER ---
@@ -431,6 +432,32 @@
                     resolve(new Uint8Array([0x1D, 0x76, 0x30, 0x00, bytesPerRow & 0xFF, (bytesPerRow >> 8) & 0xFF, canvas.height & 0xFF, (canvas.height >> 8) & 0xFF, ...rasterBytes]));
                 }, 150);
             });
+        }
+
+        function previewStruk(id) {
+            let item = dataMasuk.find(x => x.id === id);
+            if (!item) return;
+            currentPreviewData = item;
+            
+            let previewContent = `
+                <b>PANITIA PARKIR KARNAVAL</b><br>
+                --------------------------------<br>
+                <span style="font-size: 16px; font-weight: bold;">${item.plat}</span><br><br>
+                Pos    : ${item.posAsal}<br>
+                Jenis  : ${item.jenis}<br>
+                Masuk  : ${item.waktu}<br>
+                Bayar  : Rp ${item.biaya.toLocaleString('id-ID')}<br>
+                Status : ${item.status}<br>
+                --------------------------------<br>
+                Struk hilang tunjukan STNK/no.RANGKA sesuai tiket parkir<br>
+                TERIMAKASIH
+            `;
+            document.getElementById('previewReceiptContent').innerHTML = previewContent;
+            document.getElementById('modalPreviewStruk').classList.remove('hidden');
+        }
+
+        function closeModalPreview() {
+            document.getElementById('modalPreviewStruk').classList.add('hidden');
         }
 
         async function executePrintStruk() {
@@ -522,8 +549,9 @@
                             <div class="font-extrabold text-white">${r.plat} <span class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded font-bold">${r.posAsal}</span> <span class="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">${r.jenis}</span> ${statusBadge}</div>
                             <div class="text-xs text-gray-400 mt-0.5">🕒 ${r.waktu}</div>
                         </div>
-                        <div class="text-right">
+                        <div class="text-right flex items-center gap-2">
                             <div class="font-extrabold text-green-400">Rp ${r.biaya.toLocaleString('id-ID')}</div>
+                            <button onclick="previewStruk(${r.id})" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] px-2.5 py-1.5 rounded-lg font-bold shadow transition">🖨️ Re-Print</button>
                         </div>
                     </div>`;
             });
@@ -542,19 +570,51 @@
             }).then(() => {
                 let btnStart = document.getElementById('btnStartCam');
                 let btnStop = document.getElementById('btnStopCam');
+                let btnTorch = document.getElementById('btnTorch');
                 if(btnStart) btnStart.classList.add('hidden');
                 if(btnStop) btnStop.classList.remove('hidden');
+                if(btnTorch) btnTorch.classList.remove('hidden');
             }).catch(e => console.log("Kamera aktif:", e));
         }
 
         function stopCamera() {
+            torchOn = false;
+            updateTorchButtonUI();
             if (html5QrCode && html5QrCode.isScanning) {
                 html5QrCode.stop().then(() => {
                     let btnStart = document.getElementById('btnStartCam');
                     let btnStop = document.getElementById('btnStopCam');
+                    let btnTorch = document.getElementById('btnTorch');
                     if(btnStart) btnStart.classList.remove('hidden');
                     if(btnStop) btnStop.classList.add('hidden');
+                    if(btnTorch) btnTorch.classList.add('hidden');
                 }).catch(() => {});
+            }
+        }
+
+        async function toggleTorch() {
+            if (!html5QrCode || !html5QrCode.isScanning) return;
+            try {
+                let track = html5QrCode.getRunningTrack();
+                if (track) {
+                    torchOn = !torchOn;
+                    await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+                    updateTorchButtonUI();
+                }
+            } catch (err) {
+                alert("Fitur senter tidak didukung di perangkat/browser ini.");
+            }
+        }
+
+        function updateTorchButtonUI() {
+            let btnTorch = document.getElementById('btnTorch');
+            if (!btnTorch) return;
+            if (torchOn) {
+                btnTorch.innerText = "🔦 Senter: ON";
+                btnTorch.className = "text-xs bg-yellow-600 hover:bg-yellow-500 text-black px-2.5 py-1.5 rounded-lg font-bold";
+            } else {
+                btnTorch.innerText = "🔦 Senter: OFF";
+                btnTorch.className = "text-xs bg-gray-700 hover:bg-gray-600 px-2.5 py-1.5 rounded-lg font-semibold text-yellow-300";
             }
         }
 
@@ -575,7 +635,7 @@
 
         function closeModalKeluar() { 
             document.getElementById('modalKeluar').classList.add('hidden');
-            if(currentSesi === 'poskeluar') setTimeout(mulaiScan, 500); // Nyalakan kembali kamera setelah batal/tutup
+            if(currentSesi === 'poskeluar') setTimeout(mulaiScan, 500);
         }
 
         function konfirmasiKeluar() {
