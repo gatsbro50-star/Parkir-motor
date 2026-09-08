@@ -459,11 +459,26 @@
                 Bayar  : Rp ${item.biaya.toLocaleString('id-ID')}<br>
                 Status : ${item.status}<br>
                 --------------------------------<br>
+                <div id="previewQrContainer" style="display: flex; justify-content: center; margin: 10px 0;"></div>
                 Struk hilang tunjukan STNK/no.RANGKA sesuai tiket parkir/Tunggu sampai parkiran habis<br>
                 TERIMAKASIH
             `;
             document.getElementById('previewReceiptContent').innerHTML = previewContent;
             document.getElementById('modalPreviewStruk').classList.remove('hidden');
+
+            // Generate QR Code secara visual ke dalam modal preview
+            setTimeout(() => {
+                let qrContainer = document.getElementById('previewQrContainer');
+                if (qrContainer) {
+                    qrContainer.innerHTML = "";
+                    new QRCode(qrContainer, {
+                        text: `PARKIR-${item.plat}-${item.id}`,
+                        width: 100,
+                        height: 100,
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                }
+            }, 100);
         }
 
         function closeModalPreview() {
@@ -539,11 +554,9 @@
             
             let posKey = posAsalText.toLowerCase().replace('pos ', 'parkir').trim();
             
-            // Hapus dari state lokal
             dataMasuk = dataMasuk.filter(x => x.id !== id);
             render();
 
-            // Hapus dari database Firebase
             database.ref(`parkir_data/${posKey}/${id}`).remove()
                 .then(() => showToast("Transaksi berhasil dihapus!"))
                 .catch(err => alert("Gagal menghapus dari server: " + err.message));
@@ -585,7 +598,6 @@
             dataMasuk.forEach(r => {
                 let statusBadge = r.status === 'Keluar' ? '<span class="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded">Keluar</span>' : '<span class="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded">Di Dalam</span>';
                 
-                // Tombol Hapus HANYA muncul jika login sebagai 'superadmin'. Untuk pos 1-4, tombol hapus tidak ditampilkan.
                 let btnHapusHtml = (currentSesi === 'superadmin') 
                     ? `<button onclick="hapusTransaksi(${r.id}, '${r.posAsal}')" class="bg-red-900/60 hover:bg-red-800 text-red-200 text-[10px] px-2 py-1.5 rounded-lg font-bold shadow transition" title="Hapus Transaksi">🗑️</button>` 
                     : '';
