@@ -106,8 +106,29 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <button onclick="exportToExcel()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-3 shadow transition">📥 Export Excel</button>
-                    <button id="btnResetDataContainer" onclick="resetSemuaData()" class="bg-red-900/60 hover:bg-red-900 border border-red-700 text-red-200 font-bold rounded-xl text-xs px-4 py-3 shadow transition">🗑️ Reset Data</button>
+                    <button onclick="exportToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-3 shadow transition">📥 Export Excel</button>
+                </div>
+
+                <!-- PANEL UBAH PASSWORD (HANYA MUNCUL DI SUPER ADMIN) -->
+                <div id="panelSuperAdmin" class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3 hidden">
+                    <h2 class="text-xs font-bold text-purple-400 uppercase">👑 Pengaturan Ubah Password Pos & Admin</h2>
+                    <div class="space-y-2">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase mb-1">Pilih Akun yang akan diubah passwordnya:</label>
+                            <select id="targetSesiPass" class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs font-semibold text-white focus:outline-none">
+                                <option value="parkir1">Pos Parkir 1</option>
+                                <option value="parkir2">Pos Parkir 2</option>
+                                <option value="parkir3">Pos Parkir 3</option>
+                                <option value="parkir4">Pos Parkir 4</option>
+                                <option value="superadmin">👑 Super Admin</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase mb-1">Password Baru:</label>
+                            <input type="password" id="inputPasswordBaru" placeholder="Ketik password baru..." class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white focus:outline-none">
+                        </div>
+                        <button onclick="simpanPasswordBaru()" class="w-full bg-purple-600 hover:bg-purple-500 py-2.5 rounded-xl text-xs font-bold text-white shadow transition">Simpan Password Baru</button>
+                    </div>
                 </div>
 
                 <div>
@@ -223,7 +244,6 @@
             if (snapshot.exists()) dbPasswords = snapshot.val();
         });
 
-        // DIPERBAIKI: Menggunakan Object.keys agar Super Admin otomatis mengambil semua folder pos parkir
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
             let refPath = currentSesi === 'superadmin' ? 'parkir_data' : `parkir_data/${currentSesi}`;
@@ -259,7 +279,8 @@
         function prosesLogin() {
             let sesi = document.getElementById('loginSesi').value;
             let pass = document.getElementById('loginPassword').value;
-            if (pass !== (dbPasswords[sesi] || "123") && pass !== "admin123") return alert("Password salah!");
+            let defaultPass = dbPasswords[sesi] || "123";
+            if (pass !== defaultPass && pass !== "admin123") return alert("Password salah!");
             currentSesi = sesi;
             localStorage.setItem('parkir_active_sesi', sesi);
             bukaAplikasi(sesi);
@@ -280,12 +301,16 @@
             document.getElementById('appContainer').classList.add('flex');
 
             let badge = document.getElementById('badgeSesi');
+            let panelSuperAdmin = document.getElementById('panelSuperAdmin');
+
             if (sesi === 'superadmin') {
                 badge.innerText = "👑 Super Admin";
                 badge.className = "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
+                panelSuperAdmin.classList.remove('hidden');
             } else {
                 badge.innerText = `Pos Parkir ${sesi.replace('parkir', '')}`;
                 badge.className = "text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold";
+                panelSuperAdmin.classList.add('hidden');
             }
             switchTab(1);
             initRealtimeDataListener();
@@ -536,7 +561,6 @@
                             <div class="font-extrabold text-green-400">Rp ${r.biaya.toLocaleString('id-ID')}</div>
                             <div class="flex gap-2 justify-end mt-1">
                                 <button onclick="rePrintStruk(${r.id})" class="text-xs text-blue-400 font-semibold underline bg-blue-950/40 px-2 py-0.5 rounded">🖨️ Print</button>
-                                <button onclick="hapusData(${r.id})" class="text-xs text-red-400 underline">Hapus</button>
                             </div>
                         </div>
                     </div>`;
@@ -594,21 +618,19 @@
             showToast("Status: Keluar!");
         }
 
-        function hapusData(id) {
-            let d = dataMasuk.find(x => x.id === id);
-            let posKey = d.posAsal.toLowerCase().replace('pos ', 'parkir').trim();
-            if (confirm("Hapus data ini?")) {
-                dataMasuk = dataMasuk.filter(x => x.id !== id); render();
-                database.ref(`parkir_data/${posKey}/${id}`).remove();
-            }
-        }
+        function simpanPasswordBaru() {
+            if (currentSesi !== 'superadmin') return alert("Akses ditolak!");
+            let targetPos = document.getElementById('targetSesiPass').value;
+            let newPass = document.getElementById('inputPasswordBaru').value.trim();
+            if (!newPass) return alert("Password baru tidak boleh kosong!");
 
-        function resetSemuaData() {
-            if (confirm("Kosongkan seluruh data pos ini?")) {
-                dataMasuk = []; render();
-                database.ref(`parkir_data/${currentSesi}`).remove();
-                localStorage.removeItem(`backup_parkir_${currentSesi}`);
-            }
+            database.ref(`settings/passwords/${targetPos}`).set(newPass).then(() => {
+                dbPasswords[targetPos] = newPass;
+                document.getElementById('inputPasswordBaru').value = '';
+                showToast(`Password ${targetPos.toUpperCase()} berhasil diubah!`);
+            }).catch(e => {
+                alert("Gagal menyimpan password: " + e.message);
+            });
         }
 
         function exportToExcel() {
