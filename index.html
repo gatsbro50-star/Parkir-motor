@@ -65,7 +65,7 @@
                 </div>
             </div>
 
-            <!-- Tab Navigasi (Disembunyikan jika login sebagai poskeluar) -->
+            <!-- Tab Navigasi -->
             <div class="flex bg-gray-800 p-1 rounded-xl mb-4 border border-gray-700" id="navTabsContainer">
                 <button onclick="switchTab(1)" id="tabBtn1" class="flex-1 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white transition">1. Input</button>
                 <button onclick="switchTab(2)" id="tabBtn2" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-white transition">2. Data</button>
@@ -93,7 +93,7 @@
                 </div>
             </div>
 
-            <!-- HALAMAN 2: Data & Export (Dilengkapi Re-Print untuk Pos 1-4) -->
+            <!-- HALAMAN 2: Data & Export -->
             <div id="page2" class="space-y-4 hidden">
                 <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex justify-between items-center">
                     <div>
@@ -110,31 +110,40 @@
                     <button onclick="exportToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-3 shadow transition">📥 Export Excel</button>
                 </div>
 
-                <!-- PANEL UBAH PASSWORD (HANYA MUNCUL DI SUPER ADMIN) -->
-                <div id="panelSuperAdmin" class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3 hidden">
-                    <h2 class="text-xs font-bold text-purple-400 uppercase">👑 Pengaturan Ubah Password Pos & Admin</h2>
+                <!-- PANEL SUPER ADMIN (UBAH PASSWORD & RESET DATA) -->
+                <div id="panelSuperAdmin" class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-4 hidden">
+                    <div class="space-y-3 border-b border-gray-700 pb-4">
+                        <h2 class="text-xs font-bold text-purple-400 uppercase">👑 Pengaturan Password Pos</h2>
+                        <div class="space-y-2">
+                            <div>
+                                <label class="block text-[10px] text-gray-400 uppercase mb-1">Pilih Akun:</label>
+                                <select id="targetSesiPass" class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs font-semibold text-white focus:outline-none">
+                                    <option value="parkir1">Pos Parkir 1</option>
+                                    <option value="parkir2">Pos Parkir 2</option>
+                                    <option value="parkir3">Pos Parkir 3</option>
+                                    <option value="parkir4">Pos Parkir 4</option>
+                                    <option value="poskeluar">🚪 Pos Keluar</option>
+                                    <option value="superadmin">👑 Super Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-gray-400 uppercase mb-1">Password Baru:</label>
+                                <input type="text" id="inputPasswordBaru" placeholder="Ketik password baru..." class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white focus:outline-none">
+                            </div>
+                            <button type="button" onclick="simpanPasswordBaru()" class="w-full bg-purple-600 hover:bg-purple-500 py-2.5 rounded-xl text-xs font-bold text-white shadow active:scale-95 transition">Simpan Password Baru</button>
+                        </div>
+                    </div>
+
                     <div class="space-y-2">
-                        <div>
-                            <label class="block text-[10px] text-gray-400 uppercase mb-1">Pilih Akun yang akan diubah passwordnya:</label>
-                            <select id="targetSesiPass" class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs font-semibold text-white focus:outline-none">
-                                <option value="parkir1">Pos Parkir 1</option>
-                                <option value="parkir2">Pos Parkir 2</option>
-                                <option value="parkir3">Pos Parkir 3</option>
-                                <option value="parkir4">Pos Parkir 4</option>
-                                <option value="poskeluar">🚪 Pos Keluar</option>
-                                <option value="superadmin">👑 Super Admin</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] text-gray-400 uppercase mb-1">Password Baru:</label>
-                            <input type="text" id="inputPasswordBaru" placeholder="Ketik password baru..." class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white focus:outline-none">
-                        </div>
-                        <button type="button" onclick="simpanPasswordBaru()" class="w-full bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-xs font-bold text-white shadow active:scale-95 transition">Simpan Password Baru</button>
+                        <h2 class="text-xs font-bold text-red-400 uppercase">⚠️ Zona Bahaya / Reset Sistem</h2>
+                        <button type="button" onclick="resetSemuaData()" class="w-full bg-red-600 hover:bg-red-500 py-3 rounded-xl text-xs font-bold text-white shadow active:scale-95 transition flex items-center justify-center gap-1">
+                            <span>🗑️</span> Reset Semua Data Parkir
+                        </button>
                     </div>
                 </div>
 
                 <div>
-                    <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">Riwayat Kendaraan (Bisa Re-Print)</h2>
+                    <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">Riwayat Kendaraan (Bisa Re-Print / Hapus)</h2>
                     <div id="listMasuk" class="space-y-2 max-h-[350px] overflow-y-auto">
                         <p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Memuat data...</p>
                     </div>
@@ -450,7 +459,7 @@
                 Bayar  : Rp ${item.biaya.toLocaleString('id-ID')}<br>
                 Status : ${item.status}<br>
                 --------------------------------<br>
-                Struk hilang tunjukan STNK/no.RANGKA sesuai tiket parkir/Tunggu parkiran habis<br>
+                Struk hilang tunjukan STNK/no.RANGKA sesuai tiket parkir/Tunggu sampai parkiran habis<br>
                 TERIMAKASIH
             `;
             document.getElementById('previewReceiptContent').innerHTML = previewContent;
@@ -524,6 +533,37 @@
             database.ref(`parkir_data/${targetPos}/${id}`).set(item).catch(e => console.error(e));
         }
 
+        // --- HAPUS TRANSAKSI SATU PERSATU ---
+        function hapusTransaksi(id, posAsalText) {
+            if (!confirm("Yakin ingin menghapus data transaksi ini?")) return;
+            
+            let posKey = posAsalText.toLowerCase().replace('pos ', 'parkir').trim();
+            
+            // Hapus dari state lokal
+            dataMasuk = dataMasuk.filter(x => x.id !== id);
+            render();
+
+            // Hapus dari database Firebase
+            database.ref(`parkir_data/${posKey}/${id}`).remove()
+                .then(() => showToast("Transaksi berhasil dihapus!"))
+                .catch(err => alert("Gagal menghapus dari server: " + err.message));
+        }
+
+        // --- RESET SEMUA DATA (SUPER ADMIN) ---
+        function resetSemuaData() {
+            if (currentSesi !== 'superadmin') {
+                return alert("Akses ditolak! Fitur ini khusus Super Admin.");
+            }
+            if (!confirm("PERINGATAN: Semua data riwayat parkir dari seluruh pos akan dihapus permanen! Lanjutkan?")) return;
+
+            dataMasuk = [];
+            render();
+
+            database.ref('parkir_data').remove()
+                .then(() => showToast("Semua data parkir berhasil di-reset!"))
+                .catch(err => alert("Gagal mereset database: " + err.message));
+        }
+
         function render() {
             localStorage.setItem(`backup_parkir_superadmin`, JSON.stringify(dataMasuk));
 
@@ -544,15 +584,22 @@
             list.innerHTML = '';
             dataMasuk.forEach(r => {
                 let statusBadge = r.status === 'Keluar' ? '<span class="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded">Keluar</span>' : '<span class="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded">Di Dalam</span>';
+                
+                // Tombol Hapus hanya muncul jika superadmin atau pos asalnya sesuai
+                let btnHapusHtml = (currentSesi === 'superadmin' || currentSesi === r.posAsal.toLowerCase().replace('pos ', 'parkir').trim()) 
+                    ? `<button onclick="hapusTransaksi(${r.id}, '${r.posAsal}')" class="bg-red-900/60 hover:bg-red-800 text-red-200 text-[10px] px-2 py-1.5 rounded-lg font-bold shadow transition" title="Hapus Transaksi">🗑️</button>` 
+                    : '';
+
                 list.innerHTML += `
                     <div class="bg-gray-800 p-3.5 rounded-xl border border-gray-700 flex justify-between items-center text-sm">
                         <div>
                             <div class="font-extrabold text-white">${r.plat} <span class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded font-bold">${r.posAsal}</span> <span class="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">${r.jenis}</span> ${statusBadge}</div>
                             <div class="text-xs text-gray-400 mt-0.5">🕒 ${r.waktu}</div>
                         </div>
-                        <div class="text-right flex items-center gap-2">
-                            <div class="font-extrabold text-green-400">Rp ${r.biaya.toLocaleString('id-ID')}</div>
-                            <button onclick="previewStruk(${r.id})" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] px-2.5 py-1.5 rounded-lg font-bold shadow transition">🖨️ Re-Print</button>
+                        <div class="text-right flex items-center gap-1.5">
+                            <div class="font-extrabold text-green-400 mr-1">Rp ${r.biaya.toLocaleString('id-ID')}</div>
+                            <button onclick="previewStruk(${r.id})" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] px-2 py-1.5 rounded-lg font-bold shadow transition">🖨️ Re-Print</button>
+                            ${btnHapusHtml}
                         </div>
                     </div>`;
             });
