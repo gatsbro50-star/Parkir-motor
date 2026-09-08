@@ -254,7 +254,7 @@
 
         setTimeout(() => {
             if (dataMasuk.length === 0) {
-                let backup = localStorage.getItem(`backup_parkir_superadmin`);
+                let backup = localStorage.getItem(`backup_parkir_${currentSesi || 'superadmin'}`);
                 if (backup) {
                     dataMasuk = JSON.parse(backup);
                     render();
@@ -278,13 +278,24 @@
 
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
-            let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
+            
+            // Jika Super Admin, ambil semua data pos (gabungan). Jika Pos 1-4 atau Pos Keluar, ambil hanya data pos masing-masing.
+            let refPath = (currentSesi === 'superadmin') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 let gabungan = [];
                 if (snapshot.exists()) {
                     let val = snapshot.val();
-                    if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
+                    if (currentSesi === 'superadmin') {
+                        Object.keys(val).forEach(posKey => {
+                            if (val[posKey] && typeof val[posKey] === 'object') {
+                                Object.values(val[posKey]).forEach(item => {
+                                    if (item && typeof item === 'object') gabungan.push(item);
+                                });
+                            }
+                        });
+                    } else if (currentSesi === 'poskeluar') {
+                        // Pos keluar butuh scan seluruh data pos untuk validasi tiket keluar
                         Object.keys(val).forEach(posKey => {
                             if (val[posKey] && typeof val[posKey] === 'object') {
                                 Object.values(val[posKey]).forEach(item => {
@@ -293,6 +304,7 @@
                             }
                         });
                     } else {
+                        // Pos 1, 2, 3, 4 hanya mengambil datanya sendiri saja
                         Object.values(val).forEach(item => {
                             if (item && typeof item === 'object') gabungan.push(item);
                         });
@@ -578,7 +590,7 @@
         }
 
         function render() {
-            localStorage.setItem(`backup_parkir_superadmin`, JSON.stringify(dataMasuk));
+            localStorage.setItem(`backup_parkir_${currentSesi || 'superadmin'}`, JSON.stringify(dataMasuk));
 
             let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + curr.biaya, 0);
             let elJml = document.getElementById('jumlahMasuk');
@@ -738,7 +750,7 @@
             let targetPos = targetPosEl.value;
             let newPass = inputPassEl.value.trim();
             
-            if (!newPass) {
+            if (!newPass.trim()) {
                 alert("Password baru tidak boleh kosong!");
                 return;
             }
@@ -763,7 +775,7 @@
             html += `</table>`;
             let a = document.createElement('a');
             a.href = URL.createObjectURL(new Blob([html], { type: 'application/vnd.ms-excel' }));
-            a.download = `Rekap_Parkir.xls`;
+            a.download = `Rekap_Parkir_${currentSesi}.xls`;
             a.click();
         }
     </script>
