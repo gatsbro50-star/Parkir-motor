@@ -125,9 +125,9 @@
                         </div>
                         <div>
                             <label class="block text-[10px] text-gray-400 uppercase mb-1">Password Baru:</label>
-                            <input type="password" id="inputPasswordBaru" placeholder="Ketik password baru..." class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white focus:outline-none">
+                            <input type="text" id="inputPasswordBaru" placeholder="Ketik password baru..." class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white focus:outline-none">
                         </div>
-                        <button onclick="simpanPasswordBaru()" class="w-full bg-purple-600 hover:bg-purple-500 py-2.5 rounded-xl text-xs font-bold text-white shadow transition">Simpan Password Baru</button>
+                        <button type="button" onclick="simpanPasswordBaru()" class="w-full bg-purple-600 hover:bg-purple-500 py-3 rounded-xl text-xs font-bold text-white shadow active:scale-95 transition">Simpan Password Baru</button>
                     </div>
                 </div>
 
@@ -228,7 +228,6 @@
             "superadmin": "123"
         };
 
-        // Ambil password tersimpan di memori HP (jika ada)
         let localSavedPass = localStorage.getItem('parkir_db_passwords');
         if (localSavedPass) {
             try { dbPasswords = JSON.parse(localSavedPass); } catch(e){}
@@ -635,22 +634,26 @@
         }
 
         function simpanPasswordBaru() {
-            if (currentSesi !== 'superadmin') return alert("Akses ditolak!");
             let targetPos = document.getElementById('targetSesiPass').value;
             let newPass = document.getElementById('inputPasswordBaru').value.trim();
-            if (!newPass) return alert("Password baru tidak boleh kosong!");
+            
+            if (!newPass) {
+                alert("Password baru tidak boleh kosong!");
+                return;
+            }
 
-            // Simpan langsung ke memori lokal HP agar instan dan tombol langsung merespons
+            // Simpan ke memori lokal
             dbPasswords[targetPos] = newPass;
             localStorage.setItem('parkir_db_passwords', JSON.stringify(dbPasswords));
 
-            // Kirim ke database Firebase
+            // Kosongkan form input
+            document.getElementById('inputPasswordBaru').value = '';
+
+            // Coba kirim ke Firebase (jika online)
             database.ref(`settings/passwords/${targetPos}`).set(newPass).then(() => {
-                document.getElementById('inputPasswordBaru').value = '';
-                showToast(`Password ${targetPos.toUpperCase()} berhasil diubah!`);
-            }).catch(e => {
-                document.getElementById('inputPasswordBaru').value = '';
-                showToast(`Password ${targetPos.toUpperCase()} tersimpan lokal!`);
+                showToast(`Password ${targetPos.toUpperCase()} Berhasil Disimpan!`);
+            }).catch(err => {
+                showToast(`Password Tersimpan Lokal!`);
             });
         }
 
