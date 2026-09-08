@@ -93,7 +93,7 @@
                 </div>
             </div>
 
-            <!-- HALAMAN 2: Data & Export -->
+            <!-- HALAMAN 2: Data & Export (Dilengkapi Re-Print untuk Pos 1-4) -->
             <div id="page2" class="space-y-4 hidden">
                 <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex justify-between items-center">
                     <div>
@@ -141,7 +141,7 @@
                 </div>
             </div>
 
-            <!-- HALAMAN 3: Parkir Keluar -->
+            <!-- HALAMAN 3: Parkir Keluar & Lampu Senter On/Off -->
             <div id="page3" class="space-y-4 hidden">
                 <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3">
                     <div class="flex justify-between items-center">
@@ -240,6 +240,7 @@
         let activeListener = null;
         let currentPreviewData = null;
         let torchOn = false;
+        let mediaStream = null;
         const tarif = { "Motor": 10000, "Mobil": 25000 };
 
         setTimeout(() => {
@@ -449,7 +450,7 @@
                 Bayar  : Rp ${item.biaya.toLocaleString('id-ID')}<br>
                 Status : ${item.status}<br>
                 --------------------------------<br>
-                Struk hilang tunjukan STNK/no.RANGKA sesuai tiket parkir/Tunggu parkir sampai habis<br>
+                Struk hilang tunjukan STNK/no.RANGKA sesuai tiket parkir/Tunggu parkiran habis<br>
                 TERIMAKASIH
             `;
             document.getElementById('previewReceiptContent').innerHTML = previewContent;
@@ -559,6 +560,13 @@
 
         function mulaiScan() {
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(stream => {
+                    mediaStream = stream;
+                })
+                .catch(err => console.log("Gagal ambil stream torch:", err));
+
             html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (decodedText) => {
                 let id = decodedText.split('-').pop();
                 let found = dataMasuk.find(x => x.id.toString() === id);
@@ -580,6 +588,12 @@
         function stopCamera() {
             torchOn = false;
             updateTorchButtonUI();
+            
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+
             if (html5QrCode && html5QrCode.isScanning) {
                 html5QrCode.stop().then(() => {
                     let btnStart = document.getElementById('btnStartCam');
@@ -593,16 +607,18 @@
         }
 
         async function toggleTorch() {
-            if (!html5QrCode || !html5QrCode.isScanning) return;
             try {
-                let track = html5QrCode.getRunningTrack();
-                if (track) {
-                    torchOn = !torchOn;
-                    await track.applyConstraints({ advanced: [{ torch: torchOn }] });
-                    updateTorchButtonUI();
+                if (!mediaStream) {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 }
+                let track = mediaStream.getVideoTracks()[0];
+                if (!track) return alert("Kamera tidak ditemukan.");
+
+                torchOn = !torchOn;
+                await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+                updateTorchButtonUI();
             } catch (err) {
-                alert("Fitur senter tidak didukung di perangkat/browser ini.");
+                alert("Fitur senter tidak didukung di perangkat/browser ini atau izin ditolak.");
             }
         }
 
