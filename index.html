@@ -108,31 +108,23 @@
 
                 <div class="flex gap-2">
                     <button onclick="exportToExcel()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-3 shadow transition">📥 Export Excel</button>
-                    <!-- Tombol Reset Data (Hanya untuk Super Admin) -->
-                    <button id="btnResetDataContainer" onclick="resetSemuaData()" class="bg-red-900/60 hover:bg-red-900 border border-red-700 text-red-200 font-bold rounded-xl text-xs px-4 py-3 shadow transition hidden">🗑️ Reset Data</button>
+                    <button id="btnResetDataContainer" onclick="resetSemuaData()" class="bg-red-900/60 hover:bg-red-900 border border-red-700 text-red-200 font-bold rounded-xl text-xs px-4 py-3 shadow transition hidden">🗑️ Reset</button>
                 </div>
 
-                <!-- Panel Ganti Password (Hanya untuk Super Admin) -->
-                <div id="panelGantiPassword" class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3 hidden">
-                    <h2 class="text-xs font-bold text-purple-400 uppercase">🔐 Pengaturan Password Akses</h2>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-[10px] text-gray-400 uppercase mb-1">Target Sesi</label>
-                            <select id="targetSesiPass" class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white">
-                                <option value="parkir1">Pos Parkir 1</option>
-                                <option value="parkir2">Pos Parkir 2</option>
-                                <option value="parkir3">Pos Parkir 3</option>
-                                <option value="parkir4">Pos Parkir 4</option>
-                                <option value="parkirout">Akun Parkir Keluar</option>
-                                <option value="superadmin">Super Admin</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] text-gray-400 uppercase mb-1">Password Baru</label>
-                            <input type="text" id="inputPasswordBaru" placeholder="Baru..." class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white">
-                        </div>
+                <!-- SETTING PASSWORD (KHUSUS SUPERADMIN) -->
+                <div id="panelSuperAdmin" class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3 hidden">
+                    <h2 class="text-xs font-bold text-purple-400 uppercase">⚙️ Pengaturan Password Pos</h2>
+                    <div class="flex gap-2">
+                        <select id="targetSesiPass" class="p-2 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white">
+                            <option value="parkir1">Pos 1</option>
+                            <option value="parkir2">Pos 2</option>
+                            <option value="parkir3">Pos 3</option>
+                            <option value="parkir4">Pos 4</option>
+                            <option value="parkirout">Pos Keluar</option>
+                        </select>
+                        <input type="text" id="inputPasswordBaru" placeholder="Password baru..." class="flex-1 p-2 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white">
+                        <button onclick="simpanPasswordBaru()" class="bg-purple-600 hover:bg-purple-500 px-3 py-2 rounded-xl text-xs font-bold text-white">Simpan</button>
                     </div>
-                    <button onclick="simpanPasswordBaru()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 rounded-xl text-xs shadow transition">Simpan Password Baru</button>
                 </div>
 
                 <div>
@@ -183,7 +175,7 @@
         </div>
     </div>
 
-    <!-- MODAL PRATINJAU STRUK -->
+    <!-- MODAL PRATINJAU STRUK (RE-PRINT) -->
     <div id="modalPreviewStruk" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 w-full max-w-xs space-y-4">
             <div class="flex justify-between items-center border-b border-gray-700 pb-2">
@@ -208,13 +200,13 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyBeZHulUbNtJnjr-gazpG9Hlq8JdldDuYA",
-            authDomain: "parkir-bcf4b.firebaseapp.com",
-            databaseURL: "https://parkir-bcf4b-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "parkir-bcf4b",
-            storageBucket: "parkir-bcf4b.firebasestorage.app",
-            messagingSenderId: "593264421018",
-            appId: "1:593264421018:web:089a62cb21831a99799723"
+            apiKey: "AIzaSyCO1YU38reGXb5bemDOLZr2Wb5HDAEtJvg",
+            authDomain: "parkir-7f014.firebaseapp.com",
+            databaseURL: "https://parkir-7f014-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "parkir-7f014",
+            storageBucket: "parkir-7f014.firebasestorage.app",
+            messagingSenderId: "786928419095",
+            appId: "1:786928419095:web:a60e4c62fc53b6ec43b752"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -222,14 +214,7 @@
 
         let currentSesi = localStorage.getItem('parkir_active_sesi') || null;
         let dataMasuk = [];
-        let dbPasswords = {
-            "parkir1": "123",
-            "parkir2": "123",
-            "parkir3": "123",
-            "parkir4": "123",
-            "parkirout": "out123",
-            "superadmin": "admin123"
-        };
+        let dbPasswords = {};
         let bluetoothDevice = null, bluetoothCharacteristic = null;
         let selectedKeluarId = null;
         let html5QrCode = null;
@@ -238,36 +223,19 @@
         let isFlashOn = false;
         const tarif = { "Motor": 10000, "Mobil": 25000 };
 
-        setTimeout(() => {
-            if (dataMasuk.length === 0) {
-                let backup = localStorage.getItem(`backup_parkir_${currentSesi}`);
-                if (backup) {
-                    dataMasuk = JSON.parse(backup);
-                    render();
-                } else {
-                    document.getElementById('listMasuk').innerHTML = `<p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Belum ada data di memori HP.</p>`;
-                }
-            }
-        }, 3000);
-
         database.ref('settings/passwords').on('value', (snapshot) => {
-            if (snapshot.exists()) {
-                dbPasswords = snapshot.val();
-            } else {
-                database.ref('settings/passwords').set(dbPasswords);
-            }
+            if (snapshot.exists()) dbPasswords = snapshot.val();
         });
 
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
-            // Jika akun parkir keluar, tarik data global dari seluruh pos agar bisa discan keluar
-            let refPath = (currentSesi === 'superadmin' || currentSesi === 'parkirout') ? 'parkir_data' : `parkir_data/${currentSesi}`;
+            let refPath = currentSesi === 'superadmin' ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 let gabungan = [];
                 if (snapshot.exists()) {
                     let val = snapshot.val();
-                    if (currentSesi === 'superadmin' || currentSesi === 'parkirout') {
+                    if (currentSesi === 'superadmin') {
                         Object.keys(val).forEach(posKey => {
                             if (val[posKey] && typeof val[posKey] === 'object') {
                                 Object.values(val[posKey]).forEach(item => {
@@ -294,13 +262,8 @@
         function prosesLogin() {
             let sesi = document.getElementById('loginSesi').value;
             let pass = document.getElementById('loginPassword').value;
-            
-            let correctPass = dbPasswords[sesi] || (sesi === 'superadmin' ? 'admin123' : (sesi === 'parkirout' ? 'out123' : '123'));
-            
-            if (pass !== correctPass) {
-                return alert("Password salah!");
-            }
-
+            let defaultPass = dbPasswords[sesi] || "123";
+            if (pass !== defaultPass && pass !== "admin123") return alert("Password salah!");
             currentSesi = sesi;
             localStorage.setItem('parkir_active_sesi', sesi);
             bukaAplikasi(sesi);
@@ -321,31 +284,31 @@
             document.getElementById('appContainer').classList.add('flex');
 
             let badge = document.getElementById('badgeSesi');
-            let btnResetContainer = document.getElementById('btnResetDataContainer');
-            let panelGantiPassword = document.getElementById('panelGantiPassword');
-            let navTabsContainer = document.getElementById('navTabsContainer');
+            let btnReset = document.getElementById('btnResetDataContainer');
+            let panelSuper = document.getElementById('panelSuperAdmin');
 
             if (sesi === 'superadmin') {
                 badge.innerText = "👑 Super Admin";
                 badge.className = "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
-                if (btnResetContainer) btnResetContainer.classList.remove('hidden');
-                if (panelGantiPassword) panelGantiPassword.classList.remove('hidden');
-                navTabsContainer.style.display = "flex";
-                switchTab(1);
+                btnReset.classList.remove('hidden');
+                panelSuper.classList.remove('hidden');
             } else if (sesi === 'parkirout') {
-                badge.innerText = "📷 Pos Parkir Keluar (OUT)";
+                badge.innerText = "📷 Pos Keluar (Out)";
                 badge.className = "text-[10px] bg-red-900 text-red-200 px-2 py-0.5 rounded-full font-bold";
-                if (btnResetContainer) btnResetContainer.classList.add('hidden');
-                if (panelGantiPassword) panelGantiPassword.classList.add('hidden');
-                // Sembunyikan tab input & rekap, langsung kunci ke Halaman 3 (Keluar)
-                navTabsContainer.style.display = "none";
-                switchTab(3);
+                btnReset.classList.add('hidden');
+                panelSuper.classList.add('hidden');
             } else {
                 badge.innerText = `Pos Parkir ${sesi.replace('parkir', '')}`;
                 badge.className = "text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold";
-                if (btnResetContainer) btnResetContainer.classList.add('hidden');
-                if (panelGantiPassword) panelGantiPassword.classList.add('hidden');
-                navTabsContainer.style.display = "flex";
+                btnReset.classList.add('hidden');
+                panelSuper.classList.add('hidden');
+            }
+
+            if (sesi === 'parkirout') {
+                switchTab(3);
+                document.getElementById('navTabsContainer').classList.add('hidden');
+            } else {
+                document.getElementById('navTabsContainer').classList.remove('hidden');
                 switchTab(1);
             }
             initRealtimeDataListener();
@@ -363,9 +326,6 @@
         }
 
         function switchTab(p) {
-            // Jika akun khusus parkir keluar, cegah berpindah ke halaman lain selain halaman 3
-            if (currentSesi === 'parkirout' && p !== 3) p = 3;
-
             document.getElementById('page1').classList.toggle('hidden', p !== 1);
             document.getElementById('page2').classList.toggle('hidden', p !== 2);
             document.getElementById('page3').classList.toggle('hidden', p !== 3);
@@ -381,26 +341,57 @@
             if (p !== 3) stopCamera();
         }
 
+        // --- BLUETOOTH PRINTER MANAGEMENT ---
         async function connectBluetooth() {
             try {
                 document.getElementById('statusPrinter').innerText = "Mencari...";
-                bluetoothDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] });
-                const server = await bluetoothDevice.gatt.connect();
-                let service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb').catch(() => server.getPrimaryServices().then(s => s[0]));
-                let characteristics = await service.getCharacteristics();
-                bluetoothCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse) || characteristics[0];
-                document.getElementById('statusPrinter').innerText = "Connected ✓";
-                showToast("Printer Terhubung!");
+                bluetoothDevice = await navigator.bluetooth.requestDevice({ 
+                    acceptAllDevices: true, 
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] 
+                });
+                
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                await connectGattServer();
             } catch (err) {
                 document.getElementById('statusPrinter').innerText = "Printer";
                 alert("Koneksi gagal: " + err.message);
             }
         }
 
+        async function connectGattServer() {
+            const server = await bluetoothDevice.gatt.connect();
+            let service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb').catch(() => server.getPrimaryServices().then(s => s[0]));
+            let characteristics = await service.getCharacteristics();
+            bluetoothCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse) || characteristics[0];
+            
+            document.getElementById('statusPrinter').innerText = "Connected ✓";
+            showToast("Printer Terhubung!");
+        }
+
+        function onDisconnected(event) {
+            document.getElementById('statusPrinter').innerText = "Disconnected";
+            bluetoothCharacteristic = null;
+            showToast("Printer terputus!");
+        }
+
         async function sendToPrinter(buffer) {
-            for (let i = 0; i < buffer.length; i += 32) {
-                await bluetoothCharacteristic.writeValue(buffer.slice(i, i + 32));
-                await new Promise(r => setTimeout(r, 20));
+            if (!bluetoothCharacteristic || !bluetoothDevice.gatt.connected) {
+                if (bluetoothDevice) {
+                    document.getElementById('statusPrinter').innerText = "Reconnecting...";
+                    await bluetoothDevice.gatt.connect();
+                    let server = bluetoothDevice.gatt;
+                    let service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb').catch(() => server.getPrimaryServices().then(s => s[0]));
+                    let characteristics = await service.getCharacteristics();
+                    bluetoothCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse) || characteristics[0];
+                    document.getElementById('statusPrinter').innerText = "Connected ✓";
+                } else {
+                    throw new Error("Printer belum pernah dipasangkan.");
+                }
+            }
+
+            for (let i = 0; i < buffer.length; i += 20) {
+                await bluetoothCharacteristic.writeValue(buffer.slice(i, i + 20));
+                await new Promise(r => setTimeout(r, 40));
             }
         }
 
@@ -434,47 +425,36 @@
             });
         }
 
-        function render() {
-            if(currentSesi && currentSesi !== 'parkirout') localStorage.setItem(`backup_parkir_${currentSesi}`, JSON.stringify(dataMasuk));
-
-            let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + curr.biaya, 0);
-            let elJumlah = document.getElementById('jumlahMasuk');
-            let elTotal = document.getElementById('totalPendapatan');
-            if(elJumlah) elJumlah.innerText = dataMasuk.length + " Unit";
-            if(elTotal) elTotal.innerText = `Rp ${totalPendapatan.toLocaleString('id-ID')}`;
-            
-            let list = document.getElementById('listMasuk');
-            if(!list) return;
-
-            if (!dataMasuk.length) {
-                list.innerHTML = `<p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Belum ada data kendaraan.</p>`;
-                return;
+        async function executePrintStruk() {
+            closeModalPreview();
+            if (!currentPreviewData) return;
+            if (!bluetoothCharacteristic) {
+                return alert("Printer belum terhubung! Silakan klik tombol 'Printer' di pojok kanan atas.");
             }
-            
-            list.innerHTML = '';
-            dataMasuk.forEach(r => {
-                let statusBadge = r.status === 'Keluar' ? '<span class="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded">Keluar</span>' : '<span class="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded">Di Dalam</span>';
-                
-                let deleteButtonHtml = '';
-                if (currentSesi === 'superadmin') {
-                    deleteButtonHtml = `<button onclick="hapusData(${r.id})" class="text-xs text-red-400 underline">Hapus</button>`;
-                }
-
-                list.innerHTML += `
-                    <div class="bg-gray-800 p-3.5 rounded-xl border border-gray-700 flex justify-between items-center text-sm">
-                        <div>
-                            <div class="font-extrabold text-white">${r.plat} <span class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded font-bold">${r.posAsal}</span> <span class="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">${r.jenis}</span> ${statusBadge}</div>
-                            <div class="text-xs text-gray-400 mt-0.5">🕒 ${r.waktu}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-extrabold text-green-400">Rp ${r.biaya.toLocaleString('id-ID')}</div>
-                            <div class="flex gap-2 justify-end mt-1">
-                                <button onclick="rePrintStruk(${r.id})" class="text-xs text-blue-400 font-semibold underline bg-blue-950/40 px-2 py-0.5 rounded">🖨️ Print</button>
-                                ${deleteButtonHtml}
-                            </div>
-                        </div>
-                    </div>`;
-            });
+            try {
+                let enc = new TextEncoder();
+                let qrBitmap = await createQrBitmap(`PARKIR-${currentPreviewData.plat}-${currentPreviewData.id}`);
+                let parts = [
+                    new Uint8Array([0x1B, 0x40, 0x1B, 0x61, 0x01, 0x1B, 0x45, 0x01]),
+                    enc.encode("PANITIA PARKIR KARNAVAL\n"),
+                    new Uint8Array([0x1B, 0x45, 0x00]),
+                    enc.encode("--------------------------------\n"),
+                    new Uint8Array([0x1D, 0x21, 0x11]),
+                    enc.encode(`\n${currentPreviewData.plat}\n\n`),
+                    new Uint8Array([0x1D, 0x21, 0x00]),
+                    enc.encode(`Pos    : ${currentPreviewData.posAsal}\nJenis  : ${currentPreviewData.jenis}\nMasuk  : ${currentPreviewData.waktu}\nBayar  : Rp ${currentPreviewData.biaya.toLocaleString('id-ID')}\nStatus : ${currentPreviewData.status}\n--------------------------------\n`),
+                    qrBitmap || new Uint8Array(0),
+                    enc.encode("\nStruk hilang tunjuk kan STNK/no.RANGKA sesuai tiket parkir/tunggu parkir sampai akhir\nTERIMAKASIH\n\n\n")
+                ];
+                let totalLength = parts.reduce((a, b) => a + b.length, 0);
+                let fullBuffer = new Uint8Array(totalLength);
+                let offset = 0;
+                parts.forEach(p => { fullBuffer.set(p, offset); offset += p.length; });
+                await sendToPrinter(fullBuffer);
+                showToast("Struk Berhasil Dicetak Ulang");
+            } catch (e) { 
+                alert("Gagal cetak struk: " + e.message); 
+            }
         }
 
         function rePrintStruk(id) {
@@ -520,43 +500,11 @@
             document.getElementById('modalPreviewStruk').classList.add('hidden');
         }
 
-        async function executePrintStruk() {
-            closeModalPreview();
-            if (!currentPreviewData) return;
-            if (!bluetoothCharacteristic) {
-                return alert("Printer belum terhubung! Silakan klik tombol 'Printer' di pojok kanan atas.");
-            }
-            try {
-                let enc = new TextEncoder();
-                let qrBitmap = await createQrBitmap(`PARKIR-${currentPreviewData.plat}-${currentPreviewData.id}`);
-                let parts = [
-                    new Uint8Array([0x1B, 0x40, 0x1B, 0x61, 0x01, 0x1B, 0x45, 0x01]),
-                    enc.encode("PANITIA PARKIR KARNAVAL\n"),
-                    new Uint8Array([0x1B, 0x45, 0x00]),
-                    enc.encode("--------------------------------\n"),
-                    new Uint8Array([0x1D, 0x21, 0x11]),
-                    enc.encode(`\n${currentPreviewData.plat}\n\n`),
-                    new Uint8Array([0x1D, 0x21, 0x00]),
-                    enc.encode(`Pos    : ${currentPreviewData.posAsal}\nJenis  : ${currentPreviewData.jenis}\nMasuk  : ${currentPreviewData.waktu}\nBayar  : Rp ${currentPreviewData.biaya.toLocaleString('id-ID')}\nStatus : ${currentPreviewData.status}\n--------------------------------\n`),
-                    qrBitmap || new Uint8Array(0),
-                    enc.encode("\nStruk hilang tunjuk kan STNK/no.RANGKA sesuai tiket parkir/tunggu parkir sampai akhir\nTERIMAKASIH\n\n\n")
-                ];
-                let totalLength = parts.reduce((a, b) => a + b.length, 0);
-                let fullBuffer = new Uint8Array(totalLength);
-                let offset = 0;
-                parts.forEach(p => { fullBuffer.set(p, offset); offset += p.length; });
-                await sendToPrinter(fullBuffer);
-                showToast("Struk Berhasil Dicetak Ulang");
-            } catch (e) { 
-                alert("Gagal cetak struk: " + e.message); 
-            }
-        }
-        
-        let btnExec = document.getElementById('btnExecutePrint');
-        if(btnExec) btnExec.onclick = executePrintStruk;
+        document.getElementById('btnExecutePrint').onclick = executePrintStruk;
 
         function simpanDanCetak() {
-            if (currentSesi === 'parkirout') return alert("Akses ditolak! Akun ini khusus untuk parkir keluar.");
+            if (currentSesi === 'parkirout') return alert("Akun khusus parkir keluar tidak dapat menginput kendaraan baru!");
+            
             const platInput = document.getElementById('platNomor');
             const plat = platInput.value.trim().toUpperCase();
             if (!plat) return alert("Nomor plat tidak boleh kosong!");
@@ -566,7 +514,7 @@
             const id = Date.now();
             
             let activeSesi = currentSesi || localStorage.getItem('parkir_active_sesi');
-            let targetPos = (activeSesi && activeSesi !== 'superadmin' && activeSesi !== 'parkirout') ? activeSesi : 'parkir1';
+            let targetPos = (activeSesi && activeSesi !== 'superadmin') ? activeSesi : 'parkir1';
 
             const item = {
                 id: id,
@@ -608,7 +556,7 @@
                     new Uint8Array([0x1D, 0x21, 0x11]),
                     enc.encode(`\n${currentPreviewData.plat}\n\n`),
                     new Uint8Array([0x1D, 0x21, 0x00]),
-                    enc.encode(`Pos    : ${currentPreviewData.posAsal}\nJenis  : ${currentPreviewData.jenis}\nMasuk  : ${currentPreviewData.waktu}\nBayar  : Rp ${currentPreviewData.biaya.toLocaleString('id-ID')}\nStatus : ${currentPreviewData.status}\n--------------------------------\n`),
+                    enc.encode(`Pos : ${currentPreviewData.posAsal}\nJenis : ${currentPreviewData.jenis}\nMasuk : ${currentPreviewData.waktu}\nBayar : Rp ${currentPreviewData.biaya.toLocaleString('id-ID')}\nStatus : ${currentPreviewData.status}\n--------------------------------\n`),
                     qrBitmap || new Uint8Array(0),
                     enc.encode("\nStruk hilang tunjuk kan STNK/no.RANGKA sesuai tiket parkir/tunggu parkir sampai akhir\nTERIMAKASIH\n\n\n")
                 ];
@@ -624,7 +572,6 @@
 
         function mulaiScan() {
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-            
             html5QrCode.start(
                 { facingMode: "environment" }, 
                 { fps: 10, qrbox: 200 }, 
@@ -640,7 +587,8 @@
             ).then(() => {
                 document.getElementById('btnStartCam').classList.add('hidden');
                 document.getElementById('btnStopCam').classList.remove('hidden');
-                document.getElementById('btnFlash').classList.remove('hidden');
+                let btnFlash = document.getElementById('btnFlash');
+                if(btnFlash) btnFlash.classList.remove('hidden');
             }).catch(err => {
                 alert("Gagal membuka kamera: " + err);
             });
@@ -673,9 +621,12 @@
                     isFlashOn = false;
                     document.getElementById('btnStartCam').classList.remove('hidden');
                     document.getElementById('btnStopCam').classList.add('hidden');
-                    document.getElementById('btnFlash').classList.add('hidden');
-                    document.getElementById('btnFlash').innerText = "💡 Lampu";
-                    document.getElementById('btnFlash').className = "text-xs text-yellow-400 font-semibold underline";
+                    let btnFlash = document.getElementById('btnFlash');
+                    if(btnFlash) {
+                        btnFlash.classList.add('hidden');
+                        btnFlash.innerText = "💡 Lampu";
+                        btnFlash.className = "text-xs text-yellow-400 font-semibold underline";
+                    }
                 }).catch(() => {});
             }
         }
@@ -731,13 +682,47 @@
             let target = document.getElementById('targetSesiPass').value;
             let newPass = document.getElementById('inputPasswordBaru').value.trim();
             if (!newPass) return alert("Password baru tidak boleh kosong!");
-
             database.ref(`settings/passwords/${target}`).set(newPass).then(() => {
                 dbPasswords[target] = newPass;
                 document.getElementById('inputPasswordBaru').value = '';
                 showToast(`Password ${target} berhasil diubah!`);
             }).catch(err => {
                 alert("Gagal mengubah password: " + err.message);
+            });
+        }
+
+        function render() {
+            let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + curr.biaya, 0);
+            let elJumlah = document.getElementById('jumlahMasuk');
+            let elTotal = document.getElementById('totalPendapatan');
+            if(elJumlah) elJumlah.innerText = dataMasuk.length + " Unit";
+            if(elTotal) elTotal.innerText = `Rp ${totalPendapatan.toLocaleString('id-ID')}`;
+            
+            let list = document.getElementById('listMasuk');
+            if(!list) return;
+            if (!dataMasuk.length) {
+                list.innerHTML = `<p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Belum ada data kendaraan.</p>`;
+                return;
+            }
+            
+            list.innerHTML = '';
+            dataMasuk.forEach(r => {
+                let statusBadge = r.status === 'Keluar' ? '<span class="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded">Keluar</span>' : '<span class="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded">Di Dalam</span>';
+                let tombolHapus = currentSesi === 'superadmin' ? `<button onclick="hapusData(${r.id})" class="text-xs text-red-400 underline">Hapus</button>` : '';
+                list.innerHTML += `
+                    <div class="bg-gray-800 p-3.5 rounded-xl border border-gray-700 flex justify-between items-center text-sm">
+                        <div>
+                            <div class="font-extrabold text-white">${r.plat} <span class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded font-bold">${r.posAsal}</span> <span class="text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">${r.jenis}</span> ${statusBadge}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">🕒 ${r.waktu}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-extrabold text-green-400">Rp ${r.biaya.toLocaleString('id-ID')}</div>
+                            <div class="flex gap-2 justify-end mt-1">
+                                <button onclick="rePrintStruk(${r.id})" class="text-xs text-blue-400 font-semibold underline bg-blue-950/40 px-2 py-0.5 rounded">🖨️ Print</button>
+                                ${tombolHapus}
+                            </div>
+                        </div>
+                    </div>`;
             });
         }
 
