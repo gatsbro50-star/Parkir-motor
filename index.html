@@ -223,7 +223,7 @@
             if (snapshot.exists()) dbPasswords = snapshot.val();
         });
 
-        // LISTENER: Jika Super Admin, otomatis gabungkan data dari parkir1, parkir2, parkir3, parkir4
+        // DIPERBAIKI: Menggunakan Object.keys agar Super Admin otomatis mengambil semua folder pos parkir
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
             let refPath = currentSesi === 'superadmin' ? 'parkir_data' : `parkir_data/${currentSesi}`;
@@ -454,10 +454,7 @@
             const jenis = document.getElementById('jenisKendaraan').value;
             const now = new Date();
             const id = Date.now();
-            
-            // Tentukan target pos berdasarkan sesi aktif login saat ini
-            let activeSesi = currentSesi || localStorage.getItem('parkir_active_sesi');
-            let targetPos = (activeSesi && activeSesi !== 'superadmin') ? activeSesi : 'parkir1';
+            let targetPos = currentSesi === 'superadmin' ? 'parkir1' : currentSesi;
 
             const item = {
                 id: id,
@@ -481,15 +478,7 @@
             currentPreviewData = item;
             executePrintStrukDirect();
 
-            // Kirim data ke path Firebase sesuai pos masing-masing
-            database.ref(`parkir_data/${targetPos}/${id}`).set(item)
-                .then(() => {
-                    console.log("Berhasil tersimpan ke path: parkir_data/" + targetPos + "/" + id);
-                })
-                .catch(e => {
-                    console.error("Firebase Error:", e);
-                    alert("Gagal kirim ke database: " + e.message + "\nCek kembali Rules Firebase Anda!");
-                });
+            database.ref(`parkir_data/${targetPos}/${id}`).set(item).catch(e => console.error("Cloud Error", e));
         }
 
         async function executePrintStrukDirect() {
