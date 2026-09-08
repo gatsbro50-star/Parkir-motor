@@ -294,7 +294,6 @@
                             }
                         });
                     } else {
-                        // PERBAIKAN UTAMA: HANYA ambil data object langsung dari snapshot pos tersebut
                         if (val && typeof val === 'object') {
                             Object.values(val).forEach(item => {
                                 if (item && typeof item === 'object') gabungan.push(item);
@@ -305,7 +304,6 @@
                 gabungan.sort((a, b) => b.id - a.id);
                 dataMasuk = gabungan;
                 
-                // Paksa perbarui backup lokal khusus pos ini agar bersih dari data pos lain
                 if (currentSesi) {
                     localStorage.setItem(`backup_parkir_${currentSesi}`, JSON.stringify(dataMasuk));
                 }
@@ -578,8 +576,16 @@
             dataMasuk = [];
             render();
 
-            database.ref('parkir_data').remove()
-                .then(() => showToast("Semua data parkir berhasil di-reset!"))
+            let promises = ['parkir1', 'parkir2', 'parkir3', 'parkir4'].map(pos => {
+                return database.ref(`parkir_data/${pos}`).remove();
+            });
+
+            Promise.all(promises)
+                .then(() => {
+                    localStorage.clear();
+                    showToast("Semua data parkir berhasil di-reset!");
+                    setTimeout(() => location.reload(), 1000);
+                })
                 .catch(err => alert("Gagal mereset database: " + err.message));
         }
 
