@@ -279,23 +279,15 @@
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
             
-            // Jika Super Admin, ambil semua data pos (gabungan). Jika Pos 1-4 atau Pos Keluar, ambil hanya data pos masing-masing.
-            let refPath = (currentSesi === 'superadmin') ? 'parkir_data' : `parkir_data/${currentSesi}`;
+            // Tentukan jalur path Firebase berdasarkan sesi login aktif
+            let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 let gabungan = [];
                 if (snapshot.exists()) {
                     let val = snapshot.val();
-                    if (currentSesi === 'superadmin') {
-                        Object.keys(val).forEach(posKey => {
-                            if (val[posKey] && typeof val[posKey] === 'object') {
-                                Object.values(val[posKey]).forEach(item => {
-                                    if (item && typeof item === 'object') gabungan.push(item);
-                                });
-                            }
-                        });
-                    } else if (currentSesi === 'poskeluar') {
-                        // Pos keluar butuh scan seluruh data pos untuk validasi tiket keluar
+                    if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
+                        // Super Admin & Pos Keluar menggabungkan semua data pos
                         Object.keys(val).forEach(posKey => {
                             if (val[posKey] && typeof val[posKey] === 'object') {
                                 Object.values(val[posKey]).forEach(item => {
@@ -304,10 +296,12 @@
                             }
                         });
                     } else {
-                        // Pos 1, 2, 3, 4 hanya mengambil datanya sendiri saja
-                        Object.values(val).forEach(item => {
-                            if (item && typeof item === 'object') gabungan.push(item);
-                        });
+                        // Pos 1, 2, 3, 4 murni HANYA mengambil data dari posnya sendiri saja
+                        if (val && typeof val === 'object') {
+                            Object.values(val).forEach(item => {
+                                if (item && typeof item === 'object') gabungan.push(item);
+                            });
+                        }
                     }
                 }
                 gabungan.sort((a, b) => b.id - a.id);
@@ -478,7 +472,6 @@
             document.getElementById('previewReceiptContent').innerHTML = previewContent;
             document.getElementById('modalPreviewStruk').classList.remove('hidden');
 
-            // Generate QR Code secara visual ke dalam modal preview
             setTimeout(() => {
                 let qrContainer = document.getElementById('previewQrContainer');
                 if (qrContainer) {
@@ -560,7 +553,6 @@
             database.ref(`parkir_data/${targetPos}/${id}`).set(item).catch(e => console.error(e));
         }
 
-        // --- HAPUS TRANSAKSI SATU PERSATU ---
         function hapusTransaksi(id, posAsalText) {
             if (!confirm("Yakin ingin menghapus data transaksi ini?")) return;
             
@@ -574,7 +566,6 @@
                 .catch(err => alert("Gagal menghapus dari server: " + err.message));
         }
 
-        // --- RESET SEMUA DATA (SUPER ADMIN) ---
         function resetSemuaData() {
             if (currentSesi !== 'superadmin') {
                 return alert("Akses ditolak! Fitur ini khusus Super Admin.");
@@ -750,7 +741,7 @@
             let targetPos = targetPosEl.value;
             let newPass = inputPassEl.value.trim();
             
-            if (!newPass.trim()) {
+            if (!newPass) {
                 alert("Password baru tidak boleh kosong!");
                 return;
             }
