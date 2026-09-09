@@ -18,7 +18,7 @@
     <div id="pageLogin" class="flex flex-col justify-center items-center min-h-[80vh] space-y-6">
         <div class="text-center space-y-2">
             <h1 class="text-2xl font-extrabold text-blue-400 tracking-wider">🎪 PARKIR KARNAVAL</h1>
-            <p class="text-xs text-gray-400">Silakan pilih pos parkir atau login</p>
+            <p class="text-xs text-gray-400">Silakan pilih pos parkir atau login (Default Pass: 123)</p>
         </div>
 
         <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 w-full space-y-4 shadow-xl">
@@ -35,11 +35,14 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Password Akses</label>
-                <input type="password" id="loginPassword" placeholder="Masukkan password..." 
+                <input type="password" id="loginPassword" placeholder="Masukkan password (123)..." 
                        class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base text-white focus:outline-none focus:border-blue-500">
             </div>
             <button onclick="prosesLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl py-3.5 shadow-lg transition active:scale-95">
                 Masuk Sistem
+            </button>
+            <button onclick="resetPasswordDarurat()" class="w-full bg-red-900/40 hover:bg-red-900 text-red-300 text-xs font-bold rounded-xl py-2.5 transition">
+                ⚠️ Reset Password ke "123" (Jika Terkunci)
             </button>
         </div>
     </div>
@@ -230,6 +233,7 @@
 
         let currentSesi = localStorage.getItem('parkir_active_sesi') || null;
         let dataMasuk = [];
+        
         let dbPasswords = {
             "parkir1": "123",
             "parkir2": "123",
@@ -239,19 +243,11 @@
             "superadmin": "123"
         };
 
-        let localSavedPass = localStorage.getItem('parkir_db_passwords');
-        if (localSavedPass) {
-            try { dbPasswords = JSON.parse(localSavedPass); } catch(e){}
+        // Sinkronisasi password lokal & server
+        let localPass = localStorage.getItem('parkir_db_passwords');
+        if (localPass) {
+            try { dbPasswords = JSON.parse(localPass); } catch(e){}
         }
-
-        let bluetoothDevice = null, bluetoothCharacteristic = null;
-        let selectedKeluarId = null;
-        let html5QrCode = null;
-        let activeListener = null;
-        let currentPreviewData = null;
-        let torchOn = false;
-        let mediaStream = null;
-        const tarif = { "Motor": 10000, "Mobil": 25000 };
 
         database.ref('settings/passwords').on('value', (snapshot) => {
             if (snapshot.exists()) {
@@ -263,34 +259,44 @@
             }
         });
 
+        let bluetoothDevice = null, bluetoothCharacteristic = null;
+        let selectedKeluarId = null;
+        let html5QrCode = null;
+        let activeListener = null;
+        let currentPreviewData = null;
+        let torchOn = false;
+        let mediaStream = null;
+        const tarif = { "Motor": 10000, "Mobil": 25000 };
+
         // ==========================================
-        // LISTENER & EXPLICIT PARSER POS 1-4
+        // SISTEM LOCAL-FIRST & REALTIME SYNC
         // ==========================================
         function initRealtimeDataListener() {
-            loadDataFromLocalCache();
+            if (!currentSesi) return;
 
-            if (activeListener) {
-                database.ref('parkir_data').off('value', activeListener);
-            }
-            
-            let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
-
-            activeListener = database.ref(refPath).on('value', (snapshot) => {
-                prosesDataSnapshot(snapshot);
-            }, (error) => {
-                console.log("Mode offline aktif:", error);
-            });
-        }
-
-        function loadDataFromLocalCache() {
+            // 1. Ambil cache lokal BERDASARKAN SESI SPESIFIK agar tidak saling tercampur
             let cacheKey = `parkir_cache_data_${currentSesi}`;
             let cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
                 try {
                     dataMasuk = JSON.parse(cachedData);
-                    render();
+                    render(); // Render instan tanpa menunggu internet (anti-lemot)
                 } catch(e) {}
             }
+
+            if (activeListener) {
+                let oldRefPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
+                database.ref(oldRefPath).off('value', activeListener);
+            }
+            
+            let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
+
+            // 2. Tarik data terbaru dari Firebase di latar belakang
+            activeListener = database.ref(refPath).on('value', (snapshot) => {
+                prosesDataSnapshot(snapshot);
+            }, (error) => {
+                console.log("Menggunakan data lokal (Offline mode)");
+            });
         }
 
         function manualRefreshData() {
@@ -301,10 +307,10 @@
             
             database.ref(refPath).once('value').then((snapshot) => {
                 prosesDataSnapshot(snapshot);
-                showToast("Data berhasil disinkronkan!");
+                showToast("Data sinkron dengan server!");
                 if(txt) txt.innerText = "Refresh";
             }).catch((err) => {
-                showToast("Gagal terhubung ke server.");
+                showToast("Gagal terhubung, menampilkan data lokal.");
                 if(txt) txt.innerText = "Refresh";
             });
         }
@@ -316,6 +322,7 @@
                 let val = snapshot.val();
                 
                 if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
+                    // Super Admin & Pos Keluar membaca seluruh pos (parkir1 - parkir4)
                     let daftarPos = ['parkir1', 'parkir2', 'parkir3', 'parkir4'];
                     
                     daftarPos.forEach(posKey => {
@@ -340,6 +347,7 @@
                         }
                     });
                 } else {
+                    // Pos mandiri (hanya membaca data pos miliknya sendiri secara ketat)
                     Object.keys(val).forEach(idTransaksi => {
                         let item = val[idTransaksi];
                         if (item && typeof item === 'object') {
@@ -366,6 +374,7 @@
             gabungan.sort((a, b) => b.id - a.id);
             dataMasuk = gabungan;
 
+            // Simpan ke cache lokal spesifik sesi
             let cacheKey = `parkir_cache_data_${currentSesi}`;
             localStorage.setItem(cacheKey, JSON.stringify(dataMasuk));
 
@@ -379,15 +388,33 @@
         function prosesLogin() {
             let sesi = document.getElementById('loginSesi').value;
             let pass = document.getElementById('loginPassword').value;
-            let defaultPass = dbPasswords[sesi] || "123";
+            let correctPass = dbPasswords[sesi] || "123";
 
-            if (pass !== defaultPass) {
-                return alert("Password salah!");
+            if (pass !== correctPass) {
+                return alert("Password salah! Silakan masukkan password yang benar.");
             }
 
             currentSesi = sesi;
             localStorage.setItem('parkir_active_sesi', sesi);
             bukaAplikasi(sesi);
+        }
+
+        function resetPasswordDarurat() {
+            let defaultAll = {
+                "parkir1": "123",
+                "parkir2": "123",
+                "parkir3": "123",
+                "parkir4": "123",
+                "poskeluar": "123",
+                "superadmin": "123"
+            };
+            dbPasswords = defaultAll;
+            localStorage.setItem('parkir_db_passwords', JSON.stringify(defaultAll));
+            database.ref('settings/passwords').set(defaultAll).then(() => {
+                alert("Berhasil! Semua password dikembalikan ke default: 123");
+            }).catch(e => {
+                alert("Reset lokal berhasil.");
+            });
         }
 
         function logout() {
@@ -400,6 +427,10 @@
         }
 
         function bukaAplikasi(sesi) {
+            // PENTING: Reset data sementara agar tidak terjadi sisa data pos lain yang nyasar
+            dataMasuk = [];
+            render();
+
             document.getElementById('pageLogin').classList.add('hidden');
             document.getElementById('appContainer').classList.remove('hidden');
             document.getElementById('appContainer').classList.add('flex');
@@ -409,7 +440,7 @@
             let navTabs = document.getElementById('navTabsContainer');
 
             if (sesi === 'superadmin') {
-                badge.innerText = "👑 Super Admin";
+                badge.innerText = "👑 Super Admin (All Pos)";
                 badge.className = "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
                 panelSuperAdmin.classList.remove('hidden');
                 navTabs.classList.remove('hidden');
@@ -590,12 +621,14 @@
             const plat = platInput.value.trim().toUpperCase();
             if (!plat) return alert("Nomor plat tidak boleh kosong!");
 
+            // Pastikan pos mandiri hanya menyimpan ke jalurnya sendiri
             let targetPos = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir1' : currentSesi;
             if (!targetPos) return alert("Sesi pos tidak valid!");
 
             const jenis = document.getElementById('jenisKendaraan').value;
             const now = new Date();
             const id = Date.now();
+            let namaPosLabel = 'Pos ' + targetPos.replace('parkir', '');
 
             const item = {
                 id: id,
@@ -604,7 +637,7 @@
                 waktu: now.toLocaleDateString('id-ID') + ' ' + now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}),
                 biaya: tarif[jenis],
                 status: 'Di Dalam',
-                posAsal: targetPos.toUpperCase().replace('PARKIR', 'Pos ')
+                posAsal: namaPosLabel
             };
 
             platInput.value = '';
@@ -614,8 +647,9 @@
             dataMasuk.unshift(item);
             render();
 
+            // Simpan ke database Firebase sesuai jalurnya
             database.ref(`parkir_data/${targetPos}/${id}`).set(item)
-                .catch(e => console.log("Gagal menyimpan ke server:", e.message));
+                .catch(e => console.log("Gagal sinkron ke server:", e.message));
         }
 
         function hapusTransaksi(id, posAsalText) {
@@ -741,7 +775,7 @@
                 await track.applyConstraints({ advanced: [{ torch: torchOn }] });
                 updateTorchButtonUI();
             } catch (err) {
-                alert("Fitur senter tidak didukung di perangkat/browser ini atau izin ditolak.");
+                alert("Fitur senter tidak didukung di perangkat/browser ini.");
             }
         }
 
