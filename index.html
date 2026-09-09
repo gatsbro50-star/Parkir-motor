@@ -263,9 +263,9 @@
             }
         });
 
-        // STRATEGI OFFLINE-FIRST: Muat dulu dari Cache Lokal HP, lalu sinkronkan Firebase
+        // STRATEGI OFFLINE-FIRST MURNI TANPA BLOKING KONEKSI SAAT LOAD AWAL
         function initRealtimeDataListener() {
-            // 1. Ambil instan dari localStorage HP agar tidak pakai loading sama sekali
+            // 1. Instan tampilkan data dari cache lokal HP (Bebas lemot / 0 detik)
             loadDataFromLocalCache();
 
             if (activeListener) {
@@ -273,18 +273,20 @@
                 database.ref(oldPath).off('value', activeListener);
             }
             
-            let refPath;
-            if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                refPath = 'parkir_data';
-            } else {
-                refPath = `parkir_data/${currentSesi}`;
-            }
+            let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
-            // 2. Tarik data dari Firebase di latar belakang
+            // 2. Tarik data dari Firebase secara asinkron di background (tidak menahan UI)
+            database.ref(refPath).once('value').then((snapshot) => {
+                prosesDataSnapshot(snapshot);
+            }).catch((error) => {
+                console.log("Internet loyo, tetap aman menggunakan cache lokal:", error);
+            });
+
+            // 3. Pasang listener realtime pasif untuk update otomatis jika ada data baru masuk/keluar
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 prosesDataSnapshot(snapshot);
             }, (error) => {
-                console.log("Karingan loyo/offline, menggunakan cache lokal:", error);
+                console.log("Background listener offline:", error);
             });
         }
 
@@ -295,7 +297,7 @@
             if (cachedData) {
                 try {
                     dataMasuk = JSON.parse(cachedData);
-                    render(); // Langsung render seketika tanpa nunggu internet
+                    render(); // Langsung render seketika
                 } catch(e) {}
             }
         }
@@ -312,7 +314,6 @@
                 showToast("Data diperbarui dari server!");
                 if(txt) txt.innerText = "Refresh";
             }).catch((err) => {
-                // Jika internet mati saat direfresh, fallback ke data lokal
                 loadDataFromLocalCache();
                 showToast("Internet loyo, memuat data lokal!");
                 if(txt) txt.innerText = "Refresh";
