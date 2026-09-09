@@ -9,431 +9,331 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
-    <!-- FIREBASE SDK -->
+    <!-- FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 
-<body class="bg-gray-900 text-gray-100 font-sans p-4 max-w-md mx-auto min-h-screen flex flex-col justify-between">
+<body class="bg-gray-900 text-gray-100 font-sans p-4 max-w-md mx-auto min-h-screen">
 
-    <!-- ================= LOGIN ================= -->
-    <div id="pageLogin" class="flex flex-col justify-center items-center min-h-[80vh] space-y-6">
+<!-- ================= LOGIN ================= -->
 
-        <div class="text-center space-y-2">
-            <h1 class="text-2xl font-extrabold text-blue-400 tracking-wider">
-                🎪 PARKIR KARNAVAL
-            </h1>
-            <p class="text-xs text-gray-400">
-                Silakan pilih pos parkir atau login (Default Pass: 123)
-            </p>
+<div id="pageLogin" class="flex flex-col justify-center items-center min-h-[80vh] space-y-6">
+
+    <div class="text-center space-y-2">
+        <h1 class="text-2xl font-extrabold text-blue-400 tracking-wider">
+            🎪 PARKIR KARNAVAL
+        </h1>
+
+        <p class="text-xs text-gray-400">
+            Silakan pilih pos parkir
+        </p>
+    </div>
+
+    <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 w-full space-y-4 shadow-xl">
+
+        <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">
+                Pilih Sesi / Pos Parkir
+            </label>
+
+            <select id="loginSesi"
+                class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base font-semibold text-white">
+
+                <option value="parkir1">Pos Parkir 1 (Masuk)</option>
+                <option value="parkir2">Pos Parkir 2 (Masuk)</option>
+                <option value="parkir3">Pos Parkir 3 (Masuk)</option>
+                <option value="parkir4">Pos Parkir 4 (Masuk)</option>
+                <option value="poskeluar">🚪 Pos Khusus Keluar / Scan</option>
+                <option value="superadmin">👑 Super Admin (All Parkir)</option>
+
+            </select>
         </div>
 
-        <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 w-full space-y-4 shadow-xl">
+        <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">
+                Password Akses
+            </label>
+
+            <input type="password"
+                id="loginPassword"
+                placeholder="Masukkan password..."
+                class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base text-white">
+        </div>
+
+        <button onclick="prosesLogin()"
+            class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl py-3.5">
+            Masuk Sistem
+        </button>
+
+        <button onclick="resetPasswordDarurat()"
+            class="w-full bg-red-900/40 hover:bg-red-900 text-red-300 text-xs font-bold rounded-xl py-2.5">
+            ⚠️ Reset Password ke "123"
+        </button>
+
+    </div>
+</div>
+
+
+<!-- ================= APP ================= -->
+
+<div id="appContainer" class="hidden">
+
+    <!-- HEADER -->
+
+    <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
+
+        <div>
+            <h1 class="font-extrabold text-base tracking-wider text-blue-400">
+                🎪 PARKIR KARNAVAL
+            </h1>
+
+            <span id="badgeSesi"
+                class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold">
+                Pos Parkir
+            </span>
+        </div>
+
+        <div class="flex gap-2">
+
+            <button onclick="connectBluetooth()"
+                class="bg-gray-800 border border-gray-700 text-xs px-2.5 py-2 rounded-lg">
+                🖨️ <span id="statusPrinter">Printer</span>
+            </button>
+
+            <button onclick="logout()"
+                class="bg-red-900/60 border border-red-700 text-xs px-2.5 py-2 rounded-lg text-red-200">
+                🚪 Keluar
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- TAB -->
+
+    <div id="navTabsContainer"
+        class="flex bg-gray-800 p-1 rounded-xl mb-4 border border-gray-700">
+
+        <button onclick="switchTab(1)"
+            id="tabBtn1"
+            class="flex-1 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white">
+            1. Input
+        </button>
+
+        <button onclick="switchTab(2)"
+            id="tabBtn2"
+            class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400">
+            2. Data
+        </button>
+
+        <button onclick="switchTab(3)"
+            id="tabBtn3"
+            class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400">
+            3. Keluar
+        </button>
+
+    </div>
+
+
+    <!-- ================= INPUT ================= -->
+
+    <div id="page1" class="space-y-4">
+
+        <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 space-y-4">
 
             <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase mb-1">
-                    Pilih Sesi / Pos Parkir
+                    Plat Nomor / No Rangka
                 </label>
 
-                <select id="loginSesi"
-                    class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base font-semibold text-white focus:outline-none focus:border-blue-500">
+                <input type="text"
+                    id="platNomor"
+                    placeholder="B 1234 XYZ"
+                    class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-lg font-bold uppercase text-white">
+            </div>
 
-                    <option value="parkir1">Pos Parkir 1 (Masuk)</option>
-                    <option value="parkir2">Pos Parkir 2 (Masuk)</option>
-                    <option value="parkir3">Pos Parkir 3 (Masuk)</option>
-                    <option value="parkir4">Pos Parkir 4 (Masuk)</option>
-                    <option value="poskeluar">🚪 Pos Khusus Keluar / Scan</option>
-                    <option value="superadmin">👑 Super Admin (All Parkir)</option>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">
+                    Jenis Kendaraan
+                </label>
+
+                <select id="jenisKendaraan"
+                    class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base font-semibold text-white">
+
+                    <option value="Motor">Motor - Rp 10.000</option>
+                    <option value="Mobil">Mobil - Rp 25.000</option>
 
                 </select>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">
-                    Password Akses
-                </label>
-
-                <input type="password"
-                    id="loginPassword"
-                    placeholder="Masukkan password (123)..."
-                    class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base text-white focus:outline-none focus:border-blue-500">
-            </div>
-
-            <button onclick="prosesLogin()"
-                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl py-3.5 shadow-lg transition active:scale-95">
-                Masuk Sistem
-            </button>
-
-            <button onclick="resetPasswordDarurat()"
-                class="w-full bg-red-900/40 hover:bg-red-900 text-red-300 text-xs font-bold rounded-xl py-2.5 transition">
-                ⚠️ Reset Password ke "123" (Jika Terkunci)
+            <button onclick="simpanDanCetak()"
+                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl py-3.5">
+                🖨️ Simpan & Cetak Struk
             </button>
 
         </div>
+
     </div>
 
 
-    <!-- ================= APP ================= -->
-    <div id="appContainer" class="hidden flex-col justify-between flex-1">
+    <!-- ================= DATA ================= -->
+
+    <div id="page2" class="space-y-4 hidden">
+
+        <!-- TOTAL -->
+
+        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
+
+            <div class="flex justify-between">
+
+                <div>
+                    <span class="text-xs font-bold text-gray-400 uppercase">
+                        Total Pendapatan
+                    </span>
+
+                    <div id="totalPendapatan"
+                        class="font-extrabold text-green-400 text-xl">
+                        Rp 0
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <span class="text-xs font-bold text-gray-400 uppercase">
+                        Total Transaksi
+                    </span>
+
+                    <div id="jumlahMasuk"
+                        class="font-bold text-white text-lg">
+                        0 Unit
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- KHUSUS SUPER ADMIN -->
+
+        <div id="superAdminSummary"
+            class="hidden bg-gray-800 border border-purple-700 rounded-xl p-3">
+
+            <div class="text-xs font-bold text-purple-400 mb-2">
+                👑 REKAP SEMUA POS
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+
+                <div class="bg-blue-900/40 p-2 rounded-lg">
+                    <div class="text-[10px] text-blue-300">POS 1</div>
+                    <div id="countPos1" class="font-bold">0</div>
+                </div>
+
+                <div class="bg-blue-900/40 p-2 rounded-lg">
+                    <div class="text-[10px] text-blue-300">POS 2</div>
+                    <div id="countPos2" class="font-bold">0</div>
+                </div>
+
+                <div class="bg-blue-900/40 p-2 rounded-lg">
+                    <div class="text-[10px] text-blue-300">POS 3</div>
+                    <div id="countPos3" class="font-bold">0</div>
+                </div>
+
+                <div class="bg-blue-900/40 p-2 rounded-lg">
+                    <div class="text-[10px] text-blue-300">POS 4</div>
+                    <div id="countPos4" class="font-bold">0</div>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- BUTTON -->
+
+        <div class="flex gap-2">
+
+            <button onclick="exportToExcel()"
+                class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-3">
+                📥 Export Excel
+            </button>
+
+            <button onclick="manualRefreshData()"
+                class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 rounded-xl text-xs py-3">
+                🔄 <span id="txtRefresh">Refresh</span>
+            </button>
+
+        </div>
+
+
+        <!-- SUPER ADMIN -->
+
+        <div id="panelSuperAdmin"
+            class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-4 hidden">
+
+            <div>
+
+                <h2 class="text-xs font-bold text-purple-400 uppercase mb-2">
+                    👑 Pengaturan Password Pos
+                </h2>
+
+                <select id="targetSesiPass"
+                    class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white">
+
+                    <option value="parkir1">Pos Parkir 1</option>
+                    <option value="parkir2">Pos Parkir 2</option>
+                    <option value="parkir3">Pos Parkir 3</option>
+                    <option value="parkir4">Pos Parkir 4</option>
+                    <option value="poskeluar">Pos Keluar</option>
+                    <option value="superadmin">Super Admin</option>
+
+                </select>
+
+                <input type="text"
+                    id="inputPasswordBaru"
+                    placeholder="Password baru..."
+                    class="w-full mt-2 p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white">
+
+                <button onclick="simpanPasswordBaru()"
+                    class="w-full mt-2 bg-purple-600 py-2.5 rounded-xl text-xs font-bold">
+                    Simpan Password
+                </button>
+
+            </div>
+
+
+            <div class="border-t border-gray-700 pt-3">
+
+                <h2 class="text-xs font-bold text-red-400 uppercase mb-2">
+                    ⚠️ Zona Bahaya
+                </h2>
+
+                <button onclick="resetSemuaData()"
+                    class="w-full bg-red-600 hover:bg-red-500 py-3 rounded-xl text-xs font-bold">
+                    🗑️ Reset Semua Data Parkir
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- LIST TRANSAKSI -->
 
         <div>
 
-            <!-- HEADER -->
-            <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-3">
-
-                <div class="space-y-1">
-
-                    <h1 id="headerTitle"
-                        class="font-extrabold text-base tracking-wider text-blue-400">
-                        🎪 PARKIR KARNAVAL
-                    </h1>
-
-                    <div class="flex gap-1">
-                        <span id="badgeSesi"
-                            class="text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold">
-                            Pos Parkir
-                        </span>
-                    </div>
-
-                </div>
-
-                <div class="flex gap-2 items-center">
-
-                    <button onclick="connectBluetooth()"
-                        id="btnConnect"
-                        class="bg-gray-800 border border-gray-700 hover:bg-gray-700 text-xs px-2.5 py-2 rounded-lg font-semibold flex items-center gap-1 transition-all">
-
-                        <span>🖨️</span>
-                        <span id="statusPrinter">Printer</span>
-
-                    </button>
-
-                    <button onclick="logout()"
-                        class="bg-red-900/60 border border-red-700 hover:bg-red-900 text-xs px-2.5 py-2 rounded-lg font-semibold text-red-200">
-
-                        🚪 Keluar
-
-                    </button>
-
-                </div>
-            </div>
-
-
-            <!-- NAVIGATION -->
-            <div class="flex bg-gray-800 p-1 rounded-xl mb-4 border border-gray-700"
-                id="navTabsContainer">
-
-                <button onclick="switchTab(1)"
-                    id="tabBtn1"
-                    class="flex-1 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white transition">
-                    1. Input
-                </button>
-
-                <button onclick="switchTab(2)"
-                    id="tabBtn2"
-                    class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-white transition">
-                    2. Data
-                </button>
-
-                <button onclick="switchTab(3)"
-                    id="tabBtn3"
-                    class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-white transition">
-                    3. Keluar
-                </button>
-
-            </div>
-
-
-            <!-- ================= PAGE 1 ================= -->
-            <div id="page1" class="space-y-4">
-
-                <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 space-y-4">
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">
-                            Plat Nomor / No Rangka
-                        </label>
-
-                        <input type="text"
-                            id="platNomor"
-                            required
-                            placeholder="B 1234 XYZ"
-                            class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-lg font-bold uppercase text-white focus:outline-none focus:border-blue-500">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">
-                            Jenis Kendaraan
-                        </label>
-
-                        <select id="jenisKendaraan"
-                            class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base font-semibold text-white focus:outline-none">
-
-                            <option value="Motor">Motor - Rp 10.000</option>
-                            <option value="Mobil">Mobil - Rp 25.000</option>
-
-                        </select>
-                    </div>
-
-                    <button type="button"
-                        onclick="simpanDanCetak()"
-                        class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl py-3.5 shadow-lg transition active:scale-95 flex justify-center items-center gap-2">
-
-                        <span>🖨️</span>
-                        Simpan & Cetak Struk
-
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <!-- ================= PAGE 2 ================= -->
-            <div id="page2" class="space-y-4 hidden">
-
-                <!-- TOTAL -->
-                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 flex justify-between items-center">
-
-                    <div>
-                        <span class="text-xs font-bold text-gray-400 uppercase">
-                            Total Pendapatan
-                        </span>
-
-                        <div id="totalPendapatan"
-                            class="font-extrabold text-green-400 text-xl">
-                            Rp 0
-                        </div>
-                    </div>
-
-                    <div class="text-right">
-
-                        <span class="text-xs font-bold text-gray-400 uppercase">
-                            Total Masuk
-                        </span>
-
-                        <div id="jumlahMasuk"
-                            class="font-bold text-white text-lg">
-                            0 Unit
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- SUPER ADMIN INFO -->
-                <div id="superAdminInfo"
-                    class="hidden bg-purple-900/30 border border-purple-700 rounded-xl p-3 text-center">
-
-                    <div class="text-xs text-purple-300 font-bold">
-                        👑 DATA GABUNGAN SEMUA POS
-                    </div>
-
-                    <div id="superAdminJumlah"
-                        class="text-lg font-extrabold text-purple-200 mt-1">
-                        0 Transaksi
-                    </div>
-
-                </div>
-
-
-                <!-- BUTTON -->
-                <div class="flex gap-2">
-
-                    <button onclick="exportToExcel()"
-                        class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-3 shadow transition">
-                        📥 Export Excel
-                    </button>
-
-                    <button onclick="manualRefreshData()"
-                        class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 rounded-xl text-xs py-3 shadow transition flex items-center gap-1">
-
-                        🔄
-                        <span id="txtRefresh">Refresh</span>
-
-                    </button>
-
-                </div>
-
-
-                <!-- ================= SUPER ADMIN ================= -->
-                <div id="panelSuperAdmin"
-                    class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-4 hidden">
-
-                    <div class="space-y-3 border-b border-gray-700 pb-4">
-
-                        <h2 class="text-xs font-bold text-purple-400 uppercase">
-                            👑 Pengaturan Password Pos
-                        </h2>
-
-                        <div class="space-y-2">
-
-                            <div>
-                                <label class="block text-[10px] text-gray-400 uppercase mb-1">
-                                    Pilih Akun:
-                                </label>
-
-                                <select id="targetSesiPass"
-                                    class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs font-semibold text-white focus:outline-none">
-
-                                    <option value="parkir1">Pos Parkir 1</option>
-                                    <option value="parkir2">Pos Parkir 2</option>
-                                    <option value="parkir3">Pos Parkir 3</option>
-                                    <option value="parkir4">Pos Parkir 4</option>
-                                    <option value="poskeluar">🚪 Pos Keluar</option>
-                                    <option value="superadmin">👑 Super Admin</option>
-
-                                </select>
-                            </div>
-
-                            <div>
-
-                                <label class="block text-[10px] text-gray-400 uppercase mb-1">
-                                    Password Baru:
-                                </label>
-
-                                <input type="text"
-                                    id="inputPasswordBaru"
-                                    placeholder="Ketik password baru..."
-                                    class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs text-white focus:outline-none">
-
-                            </div>
-
-                            <button type="button"
-                                onclick="simpanPasswordBaru()"
-                                class="w-full bg-purple-600 hover:bg-purple-500 py-2.5 rounded-xl text-xs font-bold text-white shadow active:scale-95 transition">
-
-                                Simpan Password Baru
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="space-y-2">
-
-                        <h2 class="text-xs font-bold text-red-400 uppercase">
-                            ⚠️ Zona Bahaya / Reset Sistem
-                        </h2>
-
-                        <button type="button"
-                            onclick="resetSemuaData()"
-                            class="w-full bg-red-600 hover:bg-red-500 py-3 rounded-xl text-xs font-bold text-white shadow active:scale-95 transition flex items-center justify-center gap-1">
-
-                            <span>🗑️</span>
-                            Reset Semua Data Parkir & Cache
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-                <!-- LIST -->
-                <div>
-
-                    <div class="flex justify-between items-center mb-2">
-
-                        <h2 class="text-xs font-bold text-gray-400 uppercase">
-                            Riwayat Kendaraan (Re-Print)
-                        </h2>
-
-                        <span id="labelJumlahData"
-                            class="text-[10px] text-blue-400 font-bold">
-                            0 DATA
-                        </span>
-
-                    </div>
-
-                    <div id="listMasuk"
-                        class="space-y-2 max-h-[350px] overflow-y-auto">
-
-                        <p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">
-                            Memuat data...
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- ================= PAGE 3 ================= -->
-            <div id="page3" class="space-y-4 hidden">
-
-                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3">
-
-                    <div class="flex justify-between items-center">
-
-                        <h2 class="text-xs font-bold text-red-400 uppercase">
-                            Scan Barcode Keluar
-                        </h2>
-
-                        <div class="flex gap-2 items-center">
-
-                            <button onclick="toggleTorch()"
-                                id="btnTorch"
-                                class="text-xs bg-gray-700 hover:bg-gray-600 px-2.5 py-1.5 rounded-lg font-semibold text-yellow-300 hidden">
-
-                                🔦 Senter: OFF
-
-                            </button>
-
-                            <button onclick="stopCamera()"
-                                id="btnStopCam"
-                                class="text-xs text-gray-400 underline hidden">
-
-                                Matikan
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                    <div id="reader"
-                        class="w-full overflow-hidden rounded-lg bg-black min-h-[150px]">
-                    </div>
-
-                    <button onclick="mulaiScan()"
-                        id="btnStartCam"
-                        class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl text-xs shadow transition">
-
-                        📷 Nyalakan Kamera
-
-                    </button>
-
-                </div>
-
-
-                <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
-
-                    <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">
-                        Cari Manual Plat Nomor
-                    </h2>
-
-                    <div class="flex gap-2">
-
-                        <input type="text"
-                            id="cariPlatKeluar"
-                            placeholder="Ketik Plat..."
-                            class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-sm uppercase text-white">
-
-                        <button onclick="prosesCariManual()"
-                            class="bg-gray-700 hover:bg-gray-600 px-4 py-2.5 rounded-xl text-xs font-bold">
-
-                            Cek
-
-                        </button>
-
-                    </div>
-
-                </div>
+            <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">
+                Riwayat Kendaraan
+            </h2>
+
+            <div id="listMasuk"
+                class="space-y-2 max-h-[500px] overflow-y-auto">
+
+                <p class="text-sm text-gray-500 text-center py-4">
+                    Memuat data...
+                </p>
 
             </div>
 
@@ -442,43 +342,51 @@
     </div>
 
 
-    <!-- ================= MODAL KELUAR ================= -->
-    <div id="modalKeluar"
-        class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
+    <!-- ================= KELUAR ================= -->
 
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 w-full max-w-xs space-y-4">
+    <div id="page3" class="space-y-4 hidden">
 
-            <div class="flex justify-between items-center border-b border-gray-700 pb-3">
+        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
 
-                <h3 class="font-bold text-sm text-red-400">
-                    Konfirmasi Keluar
-                </h3>
+            <h2 class="text-xs font-bold text-red-400 uppercase mb-3">
+                Scan Barcode Keluar
+            </h2>
 
-                <button onclick="closeModalKeluar()"
-                    class="text-gray-400 font-bold text-lg">
-                    &times;
-                </button>
-
+            <div id="reader"
+                class="w-full overflow-hidden rounded-lg bg-black min-h-[150px]">
             </div>
 
-            <div id="detailKeluar"
-                class="text-sm space-y-1 bg-gray-900 p-3 rounded-xl border border-gray-700">
-            </div>
+            <button onclick="mulaiScan()"
+                id="btnStartCam"
+                class="w-full bg-red-600 text-white font-bold py-3 rounded-xl text-xs mt-3">
+                📷 Nyalakan Kamera
+            </button>
+
+            <button onclick="stopCamera()"
+                id="btnStopCam"
+                class="hidden w-full bg-gray-700 text-white py-2 rounded-xl text-xs mt-2">
+                Matikan Kamera
+            </button>
+
+        </div>
+
+
+        <div class="bg-gray-800 p-4 rounded-xl">
+
+            <h2 class="text-xs font-bold text-gray-400 uppercase mb-2">
+                Cari Manual Plat Nomor
+            </h2>
 
             <div class="flex gap-2">
 
-                <button onclick="konfirmasiKeluar()"
-                    class="flex-1 bg-green-600 text-white font-bold py-2.5 rounded-xl text-xs">
+                <input type="text"
+                    id="cariPlatKeluar"
+                    placeholder="Ketik Plat..."
+                    class="w-full p-2.5 bg-gray-900 border border-gray-700 rounded-xl text-sm uppercase text-white">
 
-                    ✅ Selesaikan
-
-                </button>
-
-                <button onclick="closeModalKeluar()"
-                    class="bg-gray-700 text-gray-300 font-bold px-4 py-2.5 rounded-xl text-xs">
-
-                    Batal
-
+                <button onclick="prosesCariManual()"
+                    class="bg-gray-700 px-4 rounded-xl text-xs font-bold">
+                    Cek
                 </button>
 
             </div>
@@ -487,412 +395,649 @@
 
     </div>
 
+</div>
 
-    <!-- ================= MODAL PREVIEW ================= -->
-    <div id="modalPreviewStruk"
-        class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
 
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 w-full max-w-xs space-y-4">
+<!-- ================= MODAL KELUAR ================= -->
 
-            <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+<div id="modalKeluar"
+    class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
 
-                <h3 class="font-bold text-xs text-blue-400 uppercase">
-                    Pratinjau Struk Parkir
-                </h3>
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 w-full max-w-xs">
 
-                <button onclick="closeModalPreview()"
-                    class="text-gray-400 font-bold text-lg">
+        <h3 class="font-bold text-sm text-red-400 mb-3">
+            Konfirmasi Keluar
+        </h3>
 
-                    &times;
+        <div id="detailKeluar"
+            class="text-sm bg-gray-900 p-3 rounded-xl mb-3">
+        </div>
 
-                </button>
+        <div class="flex gap-2">
 
-            </div>
+            <button onclick="konfirmasiKeluar()"
+                class="flex-1 bg-green-600 text-white font-bold py-2.5 rounded-xl text-xs">
+                ✅ Selesaikan
+            </button>
 
-            <div id="previewReceiptContent"
-                class="bg-white text-black font-mono text-xs p-4 rounded-xl shadow-inner space-y-1 text-center">
-            </div>
-
-            <div class="flex gap-2">
-
-                <button id="btnExecutePrint"
-                    class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl text-xs shadow transition flex items-center justify-center gap-1">
-
-                    <span>🖨️</span>
-                    Cetak ke Printer
-
-                </button>
-
-                <button onclick="closeModalPreview()"
-                    class="bg-gray-700 text-gray-300 font-bold px-4 py-3 rounded-xl text-xs">
-
-                    Batal
-
-                </button>
-
-            </div>
+            <button onclick="closeModalKeluar()"
+                class="bg-gray-700 text-gray-300 px-4 rounded-xl text-xs">
+                Batal
+            </button>
 
         </div>
 
     </div>
 
+</div>
 
-    <!-- TOAST -->
-    <div id="toastNotif"
-        class="fixed top-5 left-1/2 -translate-x-1/2 bg-green-600 text-white font-bold px-5 py-3 rounded-2xl shadow-2xl transition-all duration-300 -translate-y-20 opacity-0 z-50 text-sm flex items-center gap-2">
 
-        <span>✅</span>
-        <span id="toastText">Berhasil!</span>
+<!-- ================= PREVIEW ================= -->
+
+<div id="modalPreviewStruk"
+    class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
+
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 w-full max-w-xs">
+
+        <h3 class="font-bold text-xs text-blue-400 uppercase mb-3">
+            Pratinjau Struk
+        </h3>
+
+        <div id="previewReceiptContent"
+            class="bg-white text-black font-mono text-xs p-4 rounded-xl text-center">
+        </div>
+
+        <div class="flex gap-2 mt-3">
+
+            <button id="btnExecutePrint"
+                class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl text-xs">
+                🖨️ Cetak
+            </button>
+
+            <button onclick="closeModalPreview()"
+                class="bg-gray-700 px-4 rounded-xl text-xs">
+                Batal
+            </button>
+
+        </div>
 
     </div>
+
+</div>
+
+
+<!-- TOAST -->
+
+<div id="toastNotif"
+    class="fixed top-5 left-1/2 -translate-x-1/2 bg-green-600 text-white font-bold px-5 py-3 rounded-2xl shadow-2xl -translate-y-20 opacity-0 z-50 text-sm">
+
+    <span id="toastText">Berhasil!</span>
+
+</div>
 
 
 <script>
 
-    /* =====================================================
-       FIREBASE
-    ===================================================== */
+/* =========================================================
+   FIREBASE
+========================================================= */
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyCO1YU38reGXb5bemDOLZr2Wb5HDAEtJvg",
-        authDomain: "parkir-7f014.firebaseapp.com",
-        databaseURL: "https://parkir-7f014-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "parkir-7f014",
-        storageBucket: "parkir-7f014.firebasestorage.app",
-        messagingSenderId: "786928419095",
-        appId: "1:786928419095:web:a60e4c62fc53b6ec43b752"
-    };
+const firebaseConfig = {
 
-    firebase.initializeApp(firebaseConfig);
+    apiKey: "AIzaSyCO1YU38reGXb5bemDOLZr2Wb5HDAEtJvg",
 
-    const database = firebase.database();
+    authDomain:
+        "parkir-7f014.firebaseapp.com",
 
+    databaseURL:
+        "https://parkir-7f014-default-rtdb.asia-southeast1.firebasedatabase.app",
 
-    /* =====================================================
-       VARIABLE
-    ===================================================== */
+    projectId:
+        "parkir-7f014",
 
-    let currentSesi =
-        localStorage.getItem('parkir_active_sesi') || null;
+    storageBucket:
+        "parkir-7f014.firebasestorage.app",
 
-    let dataMasuk = [];
+    messagingSenderId:
+        "786928419095",
 
-    let bluetoothDevice = null;
-    let bluetoothCharacteristic = null;
+    appId:
+        "1:786928419095:web:a60e4c62fc53b6ec43b752"
+};
 
-    let selectedKeluarId = null;
+firebase.initializeApp(firebaseConfig);
 
-    let html5QrCode = null;
-    let currentPreviewData = null;
-
-    let torchOn = false;
-    let mediaStream = null;
-
-    /*
-       PERBAIKAN UTAMA:
-       Sekarang listener Firebase disimpan dalam array.
-       Super Admin akan listen:
-       parkir_data/parkir1
-       parkir_data/parkir2
-       parkir_data/parkir3
-       parkir_data/parkir4
-    */
-    let activeListeners = [];
-
-    let firebaseSnapshots = {};
-
-    const tarif = {
-        "Motor": 10000,
-        "Mobil": 25000
-    };
+const database = firebase.database();
 
 
-    /* =====================================================
-       PASSWORD
-    ===================================================== */
+/* =========================================================
+   VARIABLE
+========================================================= */
 
-    let dbPasswords = {
+let currentSesi =
+    localStorage.getItem("parkir_active_sesi") || null;
 
-        parkir1: "123",
-        parkir2: "123",
-        parkir3: "123",
-        parkir4: "123",
-        poskeluar: "123",
-        superadmin: "123"
+let dataMasuk = [];
 
-    };
+let activeListener = null;
+
+let selectedKeluarId = null;
+
+let bluetoothDevice = null;
+
+let bluetoothCharacteristic = null;
+
+let html5QrCode = null;
+
+let mediaStream = null;
+
+let currentPreviewData = null;
+
+const tarif = {
+
+    Motor: 10000,
+
+    Mobil: 25000
+
+};
 
 
-    let localPass =
-        localStorage.getItem('parkir_db_passwords');
+let dbPasswords = {
 
-    if (localPass) {
+    parkir1: "123",
 
-        try {
+    parkir2: "123",
 
-            dbPasswords =
-                JSON.parse(localPass);
+    parkir3: "123",
 
-        } catch (e) {}
+    parkir4: "123",
+
+    poskeluar: "123",
+
+    superadmin: "123"
+
+};
+
+
+let localPass =
+    localStorage.getItem("parkir_db_passwords");
+
+if (localPass) {
+
+    try {
+
+        dbPasswords =
+            JSON.parse(localPass);
+
+    } catch(e) {}
+
+}
+
+
+/* =========================================================
+   PASSWORD FIREBASE
+========================================================= */
+
+database
+.ref("settings/passwords")
+.on("value", snapshot => {
+
+    if (!snapshot.exists()) return;
+
+    const val = snapshot.val();
+
+    if (typeof val === "object") {
+
+        dbPasswords = {
+            ...dbPasswords,
+            ...val
+        };
+
+        localStorage.setItem(
+            "parkir_db_passwords",
+            JSON.stringify(dbPasswords)
+        );
+
+    }
+
+});
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+function prosesLogin() {
+
+    const sesi =
+        document.getElementById("loginSesi").value;
+
+    const pass =
+        document.getElementById("loginPassword").value;
+
+    const benar =
+        dbPasswords[sesi] || "123";
+
+    if (pass !== benar) {
+
+        alert("Password salah!");
+
+        return;
+
+    }
+
+    currentSesi = sesi;
+
+    localStorage.setItem(
+        "parkir_active_sesi",
+        sesi
+    );
+
+    bukaAplikasi(sesi);
+
+}
+
+
+/* =========================================================
+   BUKA APP
+========================================================= */
+
+function bukaAplikasi(sesi) {
+
+    document
+        .getElementById("pageLogin")
+        .classList.add("hidden");
+
+    document
+        .getElementById("appContainer")
+        .classList.remove("hidden");
+
+    const badge =
+        document.getElementById("badgeSesi");
+
+    const panel =
+        document.getElementById("panelSuperAdmin");
+
+    const summary =
+        document.getElementById("superAdminSummary");
+
+    const nav =
+        document.getElementById("navTabsContainer");
+
+
+    if (sesi === "superadmin") {
+
+        badge.innerText =
+            "👑 Super Admin - SEMUA POS";
+
+        badge.className =
+            "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
+
+        panel.classList.remove("hidden");
+
+        summary.classList.remove("hidden");
+
+        nav.classList.remove("hidden");
+
+        switchTab(1);
+
+    }
+
+    else if (sesi === "poskeluar") {
+
+        badge.innerText =
+            "🚪 Pos Keluar";
+
+        badge.className =
+            "text-[10px] bg-red-900 text-red-200 px-2 py-0.5 rounded-full font-bold";
+
+        panel.classList.add("hidden");
+
+        summary.classList.add("hidden");
+
+        nav.classList.add("hidden");
+
+        switchTab(3);
+
+    }
+
+    else {
+
+        badge.innerText =
+            "Pos Parkir " +
+            sesi.replace("parkir","");
+
+        badge.className =
+            "text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold";
+
+        panel.classList.add("hidden");
+
+        summary.classList.add("hidden");
+
+        nav.classList.remove("hidden");
+
+        switchTab(1);
 
     }
 
 
-    database.ref('settings/passwords').on('value', snapshot => {
+    initRealtimeDataListener();
 
-        if (snapshot.exists()) {
+}
 
-            const val = snapshot.val();
 
-            if (typeof val === 'object') {
+/* =========================================================
+   LOGOUT
+========================================================= */
 
-                dbPasswords = {
-                    ...dbPasswords,
-                    ...val
-                };
+function logout() {
 
-                localStorage.setItem(
-                    'parkir_db_passwords',
-                    JSON.stringify(dbPasswords)
+    stopCamera();
+
+    if (activeListener) {
+
+        database
+            .ref("parkir_data")
+            .off("value", activeListener);
+
+        activeListener = null;
+
+    }
+
+    currentSesi = null;
+
+    localStorage.removeItem(
+        "parkir_active_sesi"
+    );
+
+    document
+        .getElementById("pageLogin")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("appContainer")
+        .classList.add("hidden");
+
+}
+
+
+/* =========================================================
+   ★★★ PEMBACAAN DATA FIREBASE ★★★
+========================================================= */
+
+function initRealtimeDataListener() {
+
+    if (!currentSesi) return;
+
+
+    /* MATIKAN LISTENER LAMA */
+
+    if (activeListener) {
+
+        database
+            .ref("parkir_data")
+            .off("value", activeListener);
+
+        activeListener = null;
+
+    }
+
+
+    /*
+       SUPER ADMIN DAN POS KELUAR
+       MEMBACA ROOT parkir_data
+    */
+
+    let refPath = "parkir_data";
+
+    /*
+       POS BIASA HANYA MEMBACA FOLDER SENDIRI
+    */
+
+    if (
+        currentSesi !== "superadmin" &&
+        currentSesi !== "poskeluar"
+    ) {
+
+        refPath =
+            "parkir_data/" +
+            currentSesi;
+
+    }
+
+
+    console.log(
+        "MEMBACA FIREBASE:",
+        refPath
+    );
+
+
+    activeListener =
+        database
+        .ref(refPath)
+        .on(
+            "value",
+
+            snapshot => {
+
+                console.log(
+                    "DATA FIREBASE:",
+                    snapshot.val()
+                );
+
+                prosesDataSnapshot(snapshot);
+
+            },
+
+            error => {
+
+                console.error(
+                    "FIREBASE ERROR:",
+                    error
+                );
+
+                alert(
+                    "Firebase tidak bisa membaca data: " +
+                    error.message
                 );
 
             }
+        );
 
-        }
-
-    });
+}
 
 
-    /* =====================================================
-       INIT DATA LISTENER
-       ==================== PERBAIKAN ======================
-    ===================================================== */
+/* =========================================================
+   ★★★ PARSER DATA SUPER ADMIN ★★★
+========================================================= */
 
-    function initRealtimeDataListener() {
+function prosesDataSnapshot(snapshot) {
 
-        /*
-           Matikan semua listener sebelumnya
-        */
+    let hasil = [];
 
-        activeListeners.forEach(listener => {
 
-            try {
-
-                database
-                    .ref(listener.path)
-                    .off('value', listener.callback);
-
-            } catch (e) {}
-
-        });
-
-        activeListeners = [];
-
-        firebaseSnapshots = {};
+    if (!snapshot.exists()) {
 
         dataMasuk = [];
 
-        /*
-           Tentukan folder yang harus dibaca
-        */
+        render();
 
-        let folders = [];
+        return;
 
-        if (currentSesi === 'superadmin') {
+    }
+
+
+    const root =
+        snapshot.val();
+
+
+    /*
+       =====================================================
+       JIKA SUPER ADMIN
+       ROOT =
+
+       parkir_data
+          ├── parkir1
+          │     ├── ID
+          │     └── ID
+          ├── parkir2
+          ├── parkir3
+          └── parkir4
+       =====================================================
+    */
+
+
+    if (
+        currentSesi === "superadmin" ||
+        currentSesi === "poskeluar"
+    ) {
+
+
+        Object.keys(root).forEach(posKey => {
+
+            const folder =
+                root[posKey];
+
+
+            if (
+                !folder ||
+                typeof folder !== "object"
+            ) return;
+
 
             /*
-               SUPER ADMIN:
-               BACA SEMUA POS 1-4 SECARA LANGSUNG
+               HANYA POS PARKIR
             */
 
-            folders = [
-                'parkir1',
-                'parkir2',
-                'parkir3',
-                'parkir4'
-            ];
-
-        } else if (currentSesi === 'poskeluar') {
-
-            /*
-               POS KELUAR:
-               Juga membaca semua pos
-            */
-
-            folders = [
-                'parkir1',
-                'parkir2',
-                'parkir3',
-                'parkir4'
-            ];
-
-        } else {
-
-            /*
-               POS BIASA:
-               Hanya folder pos sendiri
-            */
-
-            folders = [currentSesi];
-
-        }
+            if (
+                ![
+                    "parkir1",
+                    "parkir2",
+                    "parkir3",
+                    "parkir4",
+                    "superadmin"
+                ].includes(posKey)
+            ) return;
 
 
-        /*
-           PASANG LISTENER SATU PER SATU
-        */
+            Object.keys(folder).forEach(idKey => {
 
-        folders.forEach(folder => {
-
-            const path =
-                `parkir_data/${folder}`;
-
-            const callback = snapshot => {
-
-                firebaseSnapshots[folder] =
-                    snapshot.exists()
-                        ? snapshot.val()
-                        : {};
-
-                gabungkanSemuaData();
-
-            };
+                const item =
+                    folder[idKey];
 
 
-            database
-                .ref(path)
-                .on(
-                    'value',
-                    callback,
-                    error => {
+                if (
+                    !item ||
+                    typeof item !== "object"
+                ) return;
 
-                        console.log(
-                            "Firebase listener error:",
-                            error
-                        );
+
+                /*
+                   PASTIKAN INI TRANSAKSI
+                */
+
+                if (
+                    item.plat ||
+                    item.nomor_plat ||
+                    item.jenis
+                ) {
+
+                    let nomorPos = "";
+
+                    if (
+                        posKey.startsWith("parkir")
+                    ) {
+
+                        nomorPos =
+                            posKey.replace(
+                                "parkir",
+                                ""
+                            );
 
                     }
-                );
 
 
-            activeListeners.push({
-                path: path,
-                callback: callback
+                    let labelPos =
+                        nomorPos
+                        ? "Pos " + nomorPos
+                        : "Super Admin";
+
+
+                    hasil.push({
+
+                        id:
+                            item.id ||
+                            idKey,
+
+                        plat:
+                            item.plat ||
+                            item.nomor_plat ||
+                            "-",
+
+                        jenis:
+                            item.jenis ||
+                            "Motor",
+
+                        waktu:
+                            item.waktu ||
+                            item.waktu_masuk ||
+                            "-",
+
+                        biaya:
+                            Number(item.biaya) || 0,
+
+                        status:
+                            item.status ||
+                            "Di Dalam",
+
+                        posAsal:
+                            item.posAsal ||
+                            labelPos,
+
+                        posKey:
+                            posKey
+
+                    });
+
+                }
+
             });
 
         });
 
-
-        /*
-           Tampilkan cache jika offline
-        */
-
-        const cacheKey =
-            `parkir_cache_data_${currentSesi}`;
-
-        const cachedData =
-            localStorage.getItem(cacheKey);
-
-        if (cachedData) {
-
-            try {
-
-                dataMasuk =
-                    JSON.parse(cachedData);
-
-                render();
-
-            } catch (e) {}
-
-        }
-
     }
 
 
-    /* =====================================================
-       GABUNGKAN DATA SEMUA POS
-    ===================================================== */
+    /*
+       =====================================================
+       POS BIASA
+       =====================================================
+    */
 
-    function gabungkanSemuaData() {
+    else {
 
-        let gabungan = [];
+        Object.keys(root).forEach(idKey => {
 
-        /*
-           Baca setiap folder yang sudah diterima
-        */
+            const item =
+                root[idKey];
 
-        Object.keys(firebaseSnapshots).forEach(folderKey => {
-
-            const folderData =
-                firebaseSnapshots[folderKey];
 
             if (
-                !folderData ||
-                typeof folderData !== 'object'
+                !item ||
+                typeof item !== "object"
+            ) return;
+
+
+            if (
+                item.plat ||
+                item.nomor_plat
             ) {
-                return;
-            }
 
-
-            Object.keys(folderData).forEach(idTransaksi => {
-
-                const item =
-                    folderData[idTransaksi];
-
-                if (
-                    !item ||
-                    typeof item !== 'object'
-                ) {
-                    return;
-                }
-
-
-                /*
-                   Tentukan label POS berdasarkan folder Firebase
-                */
-
-                let labelPos = "";
-
-                if (
-                    folderKey === "parkir1"
-                ) {
-
-                    labelPos = "Pos 1";
-
-                } else if (
-                    folderKey === "parkir2"
-                ) {
-
-                    labelPos = "Pos 2";
-
-                } else if (
-                    folderKey === "parkir3"
-                ) {
-
-                    labelPos = "Pos 3";
-
-                } else if (
-                    folderKey === "parkir4"
-                ) {
-
-                    labelPos = "Pos 4";
-
-                } else {
-
-                    labelPos = folderKey;
-
-                }
-
-
-                /*
-                   Masukkan transaksi
-                */
-
-                gabungan.push({
+                hasil.push({
 
                     id:
                         item.id ||
-                        idTransaksi,
+                        idKey,
 
                     plat:
                         item.plat ||
@@ -915,1666 +1060,346 @@
                         item.status ||
                         "Di Dalam",
 
-                    /*
-                       PENTING:
-                       Pos diambil dari folder Firebase,
-                       bukan hanya dari data item.
-                    */
+                    posAsal:
+                        item.posAsal ||
+                        "Pos " +
+                        currentSesi.replace(
+                            "parkir",
+                            ""
+                        ),
 
-                    posAsal: labelPos,
-
-                    /*
-                       Simpan folder asli.
-                       Ini sangat penting untuk hapus/status keluar.
-                    */
-
-                    posKey: folderKey
+                    posKey:
+                        currentSesi
 
                 });
 
-            });
-
-        });
-
-
-        /*
-           Hilangkan duplikat berdasarkan ID + POS
-        */
-
-        const uniqueMap = new Map();
-
-        gabungan.forEach(item => {
-
-            const key =
-                `${item.posKey}_${item.id}`;
-
-            uniqueMap.set(key, item);
-
-        });
-
-
-        gabungan =
-            Array.from(uniqueMap.values());
-
-
-        /*
-           Urutkan transaksi terbaru
-        */
-
-        gabungan.sort((a, b) => {
-
-            return Number(b.id) -
-                   Number(a.id);
-
-        });
-
-
-        dataMasuk = gabungan;
-
-
-        /*
-           Simpan cache
-        */
-
-        const cacheKey =
-            `parkir_cache_data_${currentSesi}`;
-
-        localStorage.setItem(
-            cacheKey,
-            JSON.stringify(dataMasuk)
-        );
-
-
-        render();
-
-    }
-
-
-    /* =====================================================
-       REFRESH MANUAL
-    ===================================================== */
-
-    async function manualRefreshData() {
-
-        const txt =
-            document.getElementById('txtRefresh');
-
-        if (txt) {
-
-            txt.innerText = "Memuat...";
-
-        }
-
-
-        try {
-
-            /*
-               Tentukan folder
-            */
-
-            let folders = [];
-
-            if (
-                currentSesi === 'superadmin' ||
-                currentSesi === 'poskeluar'
-            ) {
-
-                folders = [
-                    'parkir1',
-                    'parkir2',
-                    'parkir3',
-                    'parkir4'
-                ];
-
-            } else {
-
-                folders = [currentSesi];
-
-            }
-
-
-            /*
-               BACA SEMUA FOLDER SEKALIGUS
-            */
-
-            const hasil =
-                await Promise.all(
-
-                    folders.map(async folder => {
-
-                        const snapshot =
-                            await database
-                                .ref(`parkir_data/${folder}`)
-                                .once('value');
-
-                        return {
-                            folder: folder,
-                            data:
-                                snapshot.exists()
-                                    ? snapshot.val()
-                                    : {}
-                        };
-
-                    })
-
-                );
-
-
-            /*
-               Reset snapshot
-            */
-
-            firebaseSnapshots = {};
-
-
-            hasil.forEach(row => {
-
-                firebaseSnapshots[row.folder] =
-                    row.data;
-
-            });
-
-
-            gabungkanSemuaData();
-
-            showToast(
-                "Semua data Pos berhasil disinkronkan!"
-            );
-
-        } catch (err) {
-
-            console.log(err);
-
-            showToast(
-                "Gagal koneksi, menggunakan data lokal."
-            );
-
-        }
-
-
-        if (txt) {
-
-            txt.innerText = "Refresh";
-
-        }
-
-    }
-
-
-    /* =====================================================
-       ONLOAD
-    ===================================================== */
-
-    window.onload = function () {
-
-        if (currentSesi) {
-
-            bukaAplikasi(currentSesi);
-
-        }
-
-    };
-
-
-    /* =====================================================
-       LOGIN
-    ===================================================== */
-
-    function prosesLogin() {
-
-        const sesi =
-            document.getElementById('loginSesi').value;
-
-        const pass =
-            document.getElementById('loginPassword').value;
-
-        const correctPass =
-            dbPasswords[sesi] || "123";
-
-
-        if (pass !== correctPass) {
-
-            return alert(
-                "Password salah! Silakan masukkan password yang benar."
-            );
-
-        }
-
-
-        currentSesi = sesi;
-
-        localStorage.setItem(
-            'parkir_active_sesi',
-            sesi
-        );
-
-
-        bukaAplikasi(sesi);
-
-    }
-
-
-    /* =====================================================
-       RESET PASSWORD
-    ===================================================== */
-
-    function resetPasswordDarurat() {
-
-        const defaultAll = {
-
-            parkir1: "123",
-            parkir2: "123",
-            parkir3: "123",
-            parkir4: "123",
-            poskeluar: "123",
-            superadmin: "123"
-
-        };
-
-
-        dbPasswords = defaultAll;
-
-        localStorage.setItem(
-            'parkir_db_passwords',
-            JSON.stringify(defaultAll)
-        );
-
-
-        database
-            .ref('settings/passwords')
-            .set(defaultAll)
-
-            .then(() => {
-
-                alert(
-                    "Berhasil! Semua password dikembalikan ke default: 123"
-                );
-
-            })
-
-            .catch(e => {
-
-                alert(
-                    "Reset lokal berhasil."
-                );
-
-            });
-
-    }
-
-
-    /* =====================================================
-       LOGOUT
-    ===================================================== */
-
-    function logout() {
-
-        stopCamera();
-
-
-        /*
-           Matikan semua listener Firebase
-        */
-
-        activeListeners.forEach(listener => {
-
-            try {
-
-                database
-                    .ref(listener.path)
-                    .off(
-                        'value',
-                        listener.callback
-                    );
-
-            } catch (e) {}
-
-        });
-
-
-        activeListeners = [];
-
-        firebaseSnapshots = {};
-
-        currentSesi = null;
-
-        localStorage.removeItem(
-            'parkir_active_sesi'
-        );
-
-
-        document
-            .getElementById('pageLogin')
-            .classList
-            .remove('hidden');
-
-
-        document
-            .getElementById('appContainer')
-            .classList
-            .add('hidden');
-
-
-        document
-            .getElementById('appContainer')
-            .classList
-            .remove('flex');
-
-    }
-
-
-    /* =====================================================
-       BUKA APLIKASI
-    ===================================================== */
-
-    function bukaAplikasi(sesi) {
-
-        dataMasuk = [];
-
-        render();
-
-
-        document
-            .getElementById('pageLogin')
-            .classList
-            .add('hidden');
-
-
-        document
-            .getElementById('appContainer')
-            .classList
-            .remove('hidden');
-
-
-        document
-            .getElementById('appContainer')
-            .classList
-            .add('flex');
-
-
-        const badge =
-            document.getElementById('badgeSesi');
-
-        const panelSuperAdmin =
-            document.getElementById('panelSuperAdmin');
-
-        const navTabs =
-            document.getElementById('navTabsContainer');
-
-        const superAdminInfo =
-            document.getElementById('superAdminInfo');
-
-
-        if (sesi === 'superadmin') {
-
-            badge.innerText =
-                "👑 Super Admin (All Pos)";
-
-            badge.className =
-                "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
-
-            panelSuperAdmin
-                .classList
-                .remove('hidden');
-
-            superAdminInfo
-                .classList
-                .remove('hidden');
-
-            navTabs
-                .classList
-                .remove('hidden');
-
-            switchTab(1);
-
-
-        } else if (sesi === 'poskeluar') {
-
-            badge.innerText =
-                "🚪 Pos Keluar";
-
-            badge.className =
-                "text-[10px] bg-red-900 text-red-200 px-2 py-0.5 rounded-full font-bold";
-
-            panelSuperAdmin
-                .classList
-                .add('hidden');
-
-            superAdminInfo
-                .classList
-                .add('hidden');
-
-            navTabs
-                .classList
-                .add('hidden');
-
-            switchTab(3);
-
-
-        } else {
-
-            badge.innerText =
-                `Pos Parkir ${sesi.replace('parkir', '')}`;
-
-            badge.className =
-                "text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold";
-
-            panelSuperAdmin
-                .classList
-                .add('hidden');
-
-            superAdminInfo
-                .classList
-                .add('hidden');
-
-            navTabs
-                .classList
-                .remove('hidden');
-
-            switchTab(1);
-
-        }
-
-
-        /*
-           MULAI LISTENER BARU
-        */
-
-        initRealtimeDataListener();
-
-    }
-
-
-    /* =====================================================
-       TOAST
-    ===================================================== */
-
-    function showToast(pesan) {
-
-        const toast =
-            document.getElementById('toastNotif');
-
-        document.getElementById('toastText')
-            .innerText = pesan;
-
-
-        toast.classList.remove(
-            '-translate-y-20',
-            'opacity-0'
-        );
-
-
-        toast.classList.add(
-            'translate-y-0',
-            'opacity-100'
-        );
-
-
-        setTimeout(() => {
-
-            toast.classList.remove(
-                'translate-y-0',
-                'opacity-100'
-            );
-
-            toast.classList.add(
-                '-translate-y-20',
-                'opacity-0'
-            );
-
-        }, 3000);
-
-    }
-
-
-    /* =====================================================
-       TAB
-    ===================================================== */
-
-    function switchTab(p) {
-
-        document
-            .getElementById('page1')
-            .classList
-            .toggle(
-                'hidden',
-                p !== 1
-            );
-
-
-        document
-            .getElementById('page2')
-            .classList
-            .toggle(
-                'hidden',
-                p !== 2
-            );
-
-
-        document
-            .getElementById('page3')
-            .classList
-            .toggle(
-                'hidden',
-                p !== 3
-            );
-
-
-        [
-            'tabBtn1',
-            'tabBtn2',
-            'tabBtn3'
-        ].forEach((id, idx) => {
-
-            const btn =
-                document.getElementById(id);
-
-            if (btn) {
-
-                btn.className =
-                    (p === idx + 1)
-
-                    ?
-
-                    "flex-1 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white transition"
-
-                    :
-
-                    "flex-1 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-white transition";
-
             }
 
         });
 
-
-        if (p !== 3) {
-
-            stopCamera();
-
-        }
+    }
 
 
-        if (p === 3) {
+    /*
+       HILANGKAN DUPLIKAT
+    */
 
-            setTimeout(
-                mulaiScan,
-                300
-            );
+    const map =
+        new Map();
 
-        }
+
+    hasil.forEach(item => {
+
+        const key =
+            String(item.id);
+
+        map.set(key, item);
+
+    });
+
+
+    dataMasuk =
+        Array.from(map.values());
+
+
+    /*
+       URUTKAN TERBARU
+    */
+
+    dataMasuk.sort(
+        (a,b) =>
+            Number(b.id) -
+            Number(a.id)
+    );
+
+
+    /*
+       CACHE
+    */
+
+    localStorage.setItem(
+
+        "parkir_cache_data_" +
+        currentSesi,
+
+        JSON.stringify(dataMasuk)
+
+    );
+
+
+    console.log(
+        "TOTAL DATA TERBACA:",
+        dataMasuk.length
+    );
+
+
+    render();
+
+}
+
+
+/* =========================================================
+   REFRESH MANUAL
+========================================================= */
+
+function manualRefreshData() {
+
+    const btn =
+        document.getElementById("txtRefresh");
+
+    btn.innerText =
+        "Memuat...";
+
+
+    let refPath =
+        "parkir_data";
+
+
+    if (
+        currentSesi !== "superadmin" &&
+        currentSesi !== "poskeluar"
+    ) {
+
+        refPath =
+            "parkir_data/" +
+            currentSesi;
 
     }
 
 
-    /* =====================================================
-       BLUETOOTH PRINTER
-    ===================================================== */
+    database
+        .ref(refPath)
+        .once("value")
+        .then(snapshot => {
 
-    async function connectBluetooth() {
-
-        try {
-
-            document
-                .getElementById('statusPrinter')
-                .innerText = "Mencari...";
-
-
-            bluetoothDevice =
-                await navigator.bluetooth.requestDevice({
-
-                    acceptAllDevices: true,
-
-                    optionalServices: [
-                        '000018f0-0000-1000-8000-00805f9b34fb'
-                    ]
-
-                });
-
-
-            const server =
-                await bluetoothDevice.gatt.connect();
-
-
-            const service =
-                await server
-                    .getPrimaryService(
-                        '000018f0-0000-1000-8000-00805f9b34fb'
-                    )
-                    .catch(() =>
-                        server
-                            .getPrimaryServices()
-                            .then(s => s[0])
-                    );
-
-
-            const characteristics =
-                await service.getCharacteristics();
-
-
-            bluetoothCharacteristic =
-                characteristics.find(
-                    c =>
-                        c.properties.write ||
-                        c.properties.writeWithoutResponse
-                ) ||
-                characteristics[0];
-
-
-            document
-                .getElementById('statusPrinter')
-                .innerText =
-                "Connected ✓";
-
+            prosesDataSnapshot(snapshot);
 
             showToast(
-                "Printer Terhubung!"
+                "Data semua pos berhasil diperbarui!"
             );
 
+            btn.innerText =
+                "Refresh";
 
-        } catch (err) {
+        })
+        .catch(error => {
 
-            document
-                .getElementById('statusPrinter')
-                .innerText =
-                "Printer";
-
+            console.error(error);
 
             alert(
-                "Koneksi gagal: " +
-                err.message
+                "Gagal membaca Firebase: " +
+                error.message
             );
 
-        }
-
-    }
-
-
-    async function sendToPrinter(buffer) {
-
-        for (
-            let i = 0;
-            i < buffer.length;
-            i += 32
-        ) {
-
-            await bluetoothCharacteristic
-                .writeValue(
-                    buffer.slice(i, i + 32)
-                );
-
-            await new Promise(
-                r => setTimeout(r, 20)
-            );
-
-        }
-
-    }
-
-
-    /* =====================================================
-       QR BITMAP
-    ===================================================== */
-
-    function createQrBitmap(textValue) {
-
-        return new Promise(resolve => {
-
-            const tempDiv =
-                document.createElement('div');
-
-            tempDiv.style.display =
-                'none';
-
-            document.body.appendChild(
-                tempDiv
-            );
-
-
-            new QRCode(
-                tempDiv,
-                {
-                    text: textValue,
-                    width: 160,
-                    height: 160,
-                    correctLevel:
-                        QRCode.CorrectLevel.L
-                }
-            );
-
-
-            setTimeout(() => {
-
-                const canvas =
-                    tempDiv.querySelector(
-                        'canvas'
-                    );
-
-
-                if (!canvas) {
-
-                    document.body.removeChild(
-                        tempDiv
-                    );
-
-                    return resolve(null);
-
-                }
-
-
-                const ctx =
-                    canvas.getContext('2d');
-
-
-                const imgData =
-                    ctx.getImageData(
-                        0,
-                        0,
-                        canvas.width,
-                        canvas.height
-                    );
-
-
-                const bytesPerRow =
-                    Math.ceil(
-                        canvas.width / 8
-                    );
-
-
-                const rasterBytes = [];
-
-
-                for (
-                    let y = 0;
-                    y < canvas.height;
-                    y++
-                ) {
-
-                    for (
-                        let xByte = 0;
-                        xByte < bytesPerRow;
-                        xByte++
-                    ) {
-
-                        let byte = 0;
-
-
-                        for (
-                            let bit = 0;
-                            bit < 8;
-                            bit++
-                        ) {
-
-                            const x =
-                                xByte * 8 + bit;
-
-
-                            if (
-                                x < canvas.width &&
-                                imgData.data[
-                                    (
-                                        y *
-                                        canvas.width +
-                                        x
-                                    ) * 4
-                                ] < 128
-                            ) {
-
-                                byte |=
-                                    (
-                                        1 <<
-                                        (7 - bit)
-                                    );
-
-                            }
-
-                        }
-
-
-                        rasterBytes.push(
-                            byte
-                        );
-
-                    }
-
-                }
-
-
-                document.body.removeChild(
-                    tempDiv
-                );
-
-
-                resolve(
-                    new Uint8Array([
-                        0x1D,
-                        0x76,
-                        0x30,
-                        0x00,
-                        bytesPerRow & 0xFF,
-                        (bytesPerRow >> 8) & 0xFF,
-                        canvas.height & 0xFF,
-                        (canvas.height >> 8) & 0xFF,
-                        ...rasterBytes
-                    ])
-                );
-
-            }, 150);
+            btn.innerText =
+                "Refresh";
 
         });
 
-    }
+}
 
 
-    /* =====================================================
-       PREVIEW STRUK
-    ===================================================== */
+/* =========================================================
+   RENDER DATA
+========================================================= */
 
-    function previewStruk(id, posKey = null) {
+function render() {
 
-        let item;
-
-
-        if (posKey) {
-
-            item =
-                dataMasuk.find(
-                    x =>
-                        x.id == id &&
-                        x.posKey === posKey
-                );
-
-        } else {
-
-            item =
-                dataMasuk.find(
-                    x => x.id == id
-                );
-
-        }
-
-
-        if (!item) return;
-
-
-        currentPreviewData = item;
-
-
-        const previewContent = `
-
-            <b>PANITIA PARKIR KARNAVAL</b><br>
-
-            --------------------------------<br>
-
-            <span style="
-                font-size: 16px;
-                font-weight: bold;">
-                ${item.plat}
-            </span>
-
-            <br><br>
-
-            Pos    : ${item.posAsal}<br>
-            Jenis  : ${item.jenis}<br>
-            Masuk  : ${item.waktu}<br>
-            Bayar  : Rp ${Number(item.biaya).toLocaleString('id-ID')}<br>
-            Status : ${item.status}<br>
-
-            --------------------------------<br>
-
-            <div id="previewQrContainer"
-                style="
-                    display:flex;
-                    justify-content:center;
-                    margin:10px 0;">
-            </div>
-
-            Struk hilang tunjukan STNK/no.RANGKA
-            sesuai tiket parkir/Tunggu sampai parkiran habis<br>
-
-            TERIMAKASIH
-
-        `;
-
-
-        document
-            .getElementById(
-                'previewReceiptContent'
-            )
-            .innerHTML =
-            previewContent;
-
-
-        document
-            .getElementById(
-                'modalPreviewStruk'
-            )
-            .classList
-            .remove('hidden');
-
-
-        setTimeout(() => {
-
-            const qrContainer =
-                document.getElementById(
-                    'previewQrContainer'
-                );
-
-
-            if (qrContainer) {
-
-                qrContainer.innerHTML = "";
-
-
-                new QRCode(
-                    qrContainer,
-                    {
-                        text:
-                            `PARKIR-${item.plat}-${item.id}`,
-
-                        width: 100,
-                        height: 100,
-
-                        correctLevel:
-                            QRCode.CorrectLevel.L
-                    }
-                );
-
-            }
-
-        }, 100);
-
-    }
-
-
-    function closeModalPreview() {
-
-        document
-            .getElementById(
-                'modalPreviewStruk'
-            )
-            .classList
-            .add('hidden');
-
-    }
-
-
-    /* =====================================================
-       PRINT
-    ===================================================== */
-
-    async function executePrintStruk() {
-
-        closeModalPreview();
-
-
-        if (!currentPreviewData) {
-            return;
-        }
-
-
-        if (!bluetoothCharacteristic) {
-
-            return alert(
-                "Printer belum terhubung!"
-            );
-
-        }
-
-
-        try {
-
-            const enc =
-                new TextEncoder();
-
-
-            const qrBitmap =
-                await createQrBitmap(
-                    `PARKIR-${currentPreviewData.plat}-${currentPreviewData.id}`
-                );
-
-
-            const parts = [
-
-                new Uint8Array([
-                    0x1B,
-                    0x40,
-                    0x1B,
-                    0x61,
-                    0x01,
-                    0x1B,
-                    0x45,
-                    0x01
-                ]),
-
-                enc.encode(
-                    "PANITIA PARKIR KARNAVAL\n"
-                ),
-
-                new Uint8Array([
-                    0x1B,
-                    0x45,
-                    0x00
-                ]),
-
-                enc.encode(
-                    "--------------------------------\n"
-                ),
-
-                new Uint8Array([
-                    0x1D,
-                    0x21,
-                    0x11
-                ]),
-
-                enc.encode(
-                    `\n${currentPreviewData.plat}\n\n`
-                ),
-
-                new Uint8Array([
-                    0x1D,
-                    0x21,
-                    0x00
-                ]),
-
-                enc.encode(
-                    `Pos    : ${currentPreviewData.posAsal}\n` +
-                    `Jenis  : ${currentPreviewData.jenis}\n` +
-                    `Masuk  : ${currentPreviewData.waktu}\n` +
-                    `Bayar  : Rp ${Number(currentPreviewData.biaya).toLocaleString('id-ID')}\n` +
-                    `Status : ${currentPreviewData.status}\n` +
-                    "--------------------------------\n"
-                ),
-
-                qrBitmap ||
-                new Uint8Array(0),
-
-                enc.encode(
-                    "\nStruk hilang tunjuk kan STNK/no.RANGKA sesuai tiket parkir/tunggu parkir sampai akhir\n" +
-                    "TERIMAKASIH\n\n\n"
-                )
-
-            ];
-
-
-            const totalLength =
-                parts.reduce(
-                    (a, b) =>
-                        a + b.length,
-                    0
-                );
-
-
-            const fullBuffer =
-                new Uint8Array(
-                    totalLength
-                );
-
-
-            let offset = 0;
-
-
-            parts.forEach(p => {
-
-                fullBuffer.set(
-                    p,
-                    offset
-                );
-
-                offset += p.length;
-
-            });
-
-
-            await sendToPrinter(
-                fullBuffer
-            );
-
-
-            showToast(
-                "Struk Berhasil Dicetak"
-            );
-
-
-        } catch (e) {
-
-            alert(
-                "Gagal cetak struk: " +
-                e.message
-            );
-
-        }
-
-    }
+    const total =
+        dataMasuk.reduce(
+            (acc, item) =>
+                acc +
+                (Number(item.biaya) || 0),
+            0
+        );
 
 
     document
-        .getElementById(
-            'btnExecutePrint'
-        )
-        .onclick =
-        executePrintStruk;
+        .getElementById("jumlahMasuk")
+        .innerText =
+            dataMasuk.length +
+            " Unit";
 
 
-    /* =====================================================
-       SIMPAN TRANSAKSI
-    ===================================================== */
-
-    function simpanDanCetak() {
-
-        const platInput =
-            document.getElementById(
-                'platNomor'
-            );
+    document
+        .getElementById("totalPendapatan")
+        .innerText =
+            "Rp " +
+            total.toLocaleString("id-ID");
 
 
-        const plat =
-            platInput.value
-                .trim()
-                .toUpperCase();
+    /*
+       REKAP POS
+    */
 
-
-        if (!plat) {
-
-            return alert(
-                "Nomor plat tidak boleh kosong!"
-            );
-
-        }
-
-
-        /*
-           Jika Super Admin input transaksi,
-           tetap masuk folder superadmin.
-        */
-
-        const targetPos =
-            currentSesi;
-
-
-        let namaPosLabel;
-
-
-        if (
-            currentSesi.includes(
-                'parkir'
-            )
-        ) {
-
-            namaPosLabel =
-                'Pos ' +
-                currentSesi.replace(
-                    'parkir',
-                    ''
-                );
-
-        } else if (
-            currentSesi ===
-            'superadmin'
-        ) {
-
-            namaPosLabel =
-                'Super Admin';
-
-        } else {
-
-            namaPosLabel =
-                'Pos Keluar';
-
-        }
-
-
-        const jenis =
-            document
-                .getElementById(
-                    'jenisKendaraan'
-                )
-                .value;
-
-
-        const now =
-            new Date();
-
-
-        const id =
-            Date.now();
-
-
-        const item = {
-
-            id: id,
-
-            plat: plat,
-
-            jenis: jenis,
-
-            waktu:
-                now.toLocaleDateString(
-                    'id-ID'
-                ) +
-                ' ' +
-                now.toLocaleTimeString(
-                    'id-ID',
-                    {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    }
-                ),
-
-            biaya:
-                tarif[jenis],
-
-            status:
-                'Di Dalam',
-
-            posAsal:
-                namaPosLabel
-
-        };
-
-
-        platInput.value = "";
-
-
-        showToast(
-            `Tersimpan: ${plat}`
-        );
-
-
-        currentPreviewData =
-            item;
-
-
-        dataMasuk.unshift({
-            ...item,
-            posKey: targetPos
-        });
-
-
-        render();
-
-
-        database
-            .ref(
-                `parkir_data/${targetPos}/${id}`
-            )
-            .set(item)
-
-            .catch(e =>
-                console.log(
-                    "Gagal sinkron:",
-                    e.message
-                )
-            );
-
-    }
-
-
-    /* =====================================================
-       HAPUS TRANSAKSI
-    ===================================================== */
-
-    function hapusTransaksi(
-        id,
-        posKey
+    if (
+        currentSesi === "superadmin"
     ) {
 
-        if (
-            !confirm(
-                "Yakin ingin menghapus data transaksi ini?"
-            )
-        ) {
-            return;
-        }
+        let p1 = 0;
+        let p2 = 0;
+        let p3 = 0;
+        let p4 = 0;
 
 
-        if (!posKey) {
+        dataMasuk.forEach(item => {
 
-            return alert(
-                "Folder Pos tidak diketahui."
-            );
-
-        }
-
-
-        database
-            .ref(
-                `parkir_data/${posKey}/${id}`
-            )
-            .remove()
-
-            .then(() => {
-
-                showToast(
-                    "Transaksi berhasil dihapus!"
-                );
-
-            })
-
-            .catch(err => {
-
-                alert(
-                    "Gagal menghapus: " +
-                    err.message
-                );
-
-            });
-
-    }
-
-
-    /* =====================================================
-       RESET SEMUA DATA
-    ===================================================== */
-
-    function resetSemuaData() {
-
-        if (
-            currentSesi !==
-            'superadmin'
-        ) {
-
-            return alert(
-                "Akses ditolak! Fitur ini khusus Super Admin."
-            );
-
-        }
-
-
-        if (
-            !confirm(
-                "PERINGATAN: Semua data riwayat parkir di Firebase & cache lokal akan dihapus permanen! Lanjutkan?"
-            )
-        ) {
-
-            return;
-
-        }
-
-
-        const promises = [
-
-            'parkir1',
-            'parkir2',
-            'parkir3',
-            'parkir4',
-            'superadmin'
-
-        ].map(pos =>
-
-            database
-                .ref(
-                    `parkir_data/${pos}`
-                )
-                .remove()
-
-        );
-
-
-        Promise
-            .all(promises)
-
-            .then(() => {
-
-                localStorage.clear();
-
-                showToast(
-                    "Semua data & cache berhasil dibersihkan!"
-                );
-
-
-                setTimeout(
-                    () => location.reload(),
-                    1000
-                );
-
-            })
-
-            .catch(err => {
-
-                alert(
-                    "Gagal mereset database: " +
-                    err.message
-                );
-
-            });
-
-    }
-
-
-    /* =====================================================
-       RENDER DATA
-    ===================================================== */
-
-    function render() {
-
-        /*
-           Total semua transaksi yang sedang ditampilkan
-        */
-
-        const totalPendapatan =
-            dataMasuk.reduce(
-                (acc, curr) =>
-                    acc +
-                    (Number(curr.biaya) || 0),
-                0
-            );
-
-
-        const elJml =
-            document.getElementById(
-                'jumlahMasuk'
-            );
-
-
-        const elTotal =
-            document.getElementById(
-                'totalPendapatan'
-            );
-
-
-        if (elJml) {
-
-            elJml.innerText =
-                dataMasuk.length +
-                " Unit";
-
-        }
-
-
-        if (elTotal) {
-
-            elTotal.innerText =
-                `Rp ${totalPendapatan.toLocaleString('id-ID')}`;
-
-        }
-
-
-        /*
-           Khusus Super Admin
-        */
-
-        if (
-            currentSesi ===
-            'superadmin'
-        ) {
-
-            const info =
-                document.getElementById(
-                    'superAdminJumlah'
-                );
-
-
-            if (info) {
-
-                info.innerText =
-                    dataMasuk.length +
-                    " Transaksi";
-
-            }
-
-        }
-
-
-        const label =
-            document.getElementById(
-                'labelJumlahData'
-            );
-
-
-        if (label) {
-
-            label.innerText =
-                dataMasuk.length +
-                " DATA";
-
-        }
-
-
-        const list =
-            document.getElementById(
-                'listMasuk'
-            );
-
-
-        if (!list) return;
-
-
-        if (!dataMasuk.length) {
-
-            list.innerHTML = `
-
-                <p class="
-                    text-sm
-                    text-gray-500
-                    italic
-                    text-center
-                    py-4
-                    bg-gray-800
-                    rounded-xl
-                    border
-                    border-gray-700">
-
-                    Belum ada data kendaraan.
-
-                </p>
-
-            `;
-
-            return;
-
-        }
-
-
-        list.innerHTML = "";
-
-
-        dataMasuk.forEach(r => {
-
-            const statusBadge =
-                r.status === 'Keluar'
-
-                ?
-
-                `<span class="
-                    text-xs
-                    bg-red-900
-                    text-red-300
-                    px-2
-                    py-0.5
-                    rounded">
-                    Keluar
-                </span>`
-
-                :
-
-                `<span class="
-                    text-xs
-                    bg-green-900
-                    text-green-300
-                    px-2
-                    py-0.5
-                    rounded">
-                    Di Dalam
-                </span>`;
-
-
-            /*
-               Tombol hapus hanya Super Admin
-            */
-
-            const btnHapusHtml =
-                currentSesi ===
-                'superadmin'
-
-                ?
-
-                `<button
-                    onclick="hapusTransaksi('${r.id}', '${r.posKey}')"
-                    class="
-                        bg-red-900/60
-                        hover:bg-red-800
-                        text-red-200
-                        text-[10px]
-                        px-2
-                        py-1.5
-                        rounded-lg
-                        font-bold
-                        shadow
-                        transition">
-
-                    🗑️
-
-                </button>`
-
-                :
-
+            const key =
+                item.posKey ||
                 "";
 
 
-            list.innerHTML += `
+            if (key === "parkir1")
+                p1++;
 
-                <div class="
-                    bg-gray-800
-                    p-3.5
-                    rounded-xl
-                    border
-                    border-gray-700
-                    flex
-                    justify-between
-                    items-center
-                    text-sm">
+            if (key === "parkir2")
+                p2++;
 
-                    <div>
+            if (key === "parkir3")
+                p3++;
 
-                        <div class="
-                            font-extrabold
-                            text-white">
+            if (key === "parkir4")
+                p4++;
 
-                            ${r.plat}
+        });
 
-                            <span class="
-                                text-[10px]
-                                bg-blue-900
-                                text-blue-200
-                                px-2
-                                py-0.5
-                                rounded
-                                font-bold">
 
-                                ${r.posAsal}
+        document.getElementById(
+            "countPos1"
+        ).innerText =
+            p1 + " transaksi";
 
+
+        document.getElementById(
+            "countPos2"
+        ).innerText =
+            p2 + " transaksi";
+
+
+        document.getElementById(
+            "countPos3"
+        ).innerText =
+            p3 + " transaksi";
+
+
+        document.getElementById(
+            "countPos4"
+        ).innerText =
+            p4 + " transaksi";
+
+    }
+
+
+    const list =
+        document.getElementById(
+            "listMasuk"
+        );
+
+
+    if (!dataMasuk.length) {
+
+        list.innerHTML = `
+            <div class="bg-gray-800 border border-gray-700 rounded-xl p-5 text-center">
+                <div class="text-3xl mb-2">📭</div>
+                <div class="text-sm text-gray-400">
+                    Belum ada transaksi.
+                </div>
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    list.innerHTML = "";
+
+
+    dataMasuk.forEach(item => {
+
+
+        const keluar =
+            item.status === "Keluar";
+
+
+        const statusBadge =
+            keluar
+
+            ? `
+                <span class="text-[10px] bg-red-900 text-red-300 px-2 py-0.5 rounded">
+                    Keluar
+                </span>
+              `
+
+            : `
+                <span class="text-[10px] bg-green-900 text-green-300 px-2 py-0.5 rounded">
+                    Di Dalam
+                </span>
+              `;
+
+
+        let posColor =
+            "bg-blue-900 text-blue-200";
+
+
+        if (
+            item.posKey === "parkir2"
+        )
+            posColor =
+                "bg-green-900 text-green-200";
+
+
+        if (
+            item.posKey === "parkir3"
+        )
+            posColor =
+                "bg-yellow-900 text-yellow-200";
+
+
+        if (
+            item.posKey === "parkir4"
+        )
+            posColor =
+                "bg-red-900 text-red-200";
+
+
+        const hapus =
+            currentSesi === "superadmin"
+
+            ? `
+                <button
+                    onclick="hapusTransaksi('${item.posKey}','${item.id}')"
+                    class="bg-red-900/60 text-red-200 text-[10px] px-2 py-1.5 rounded-lg">
+                    🗑️
+                </button>
+              `
+
+            : "";
+
+
+        list.innerHTML += `
+
+            <div class="bg-gray-800 p-3.5 rounded-xl border border-gray-700">
+
+                <div class="flex justify-between items-start gap-2">
+
+                    <div class="min-w-0">
+
+                        <div class="font-extrabold text-white text-sm">
+
+                            ${escapeHtml(item.plat)}
+
+                        </div>
+
+
+                        <div class="flex flex-wrap gap-1 mt-1">
+
+                            <span class="text-[10px] ${posColor} px-2 py-0.5 rounded font-bold">
+                                ${escapeHtml(item.posAsal)}
                             </span>
 
-                            <span class="
-                                text-xs
-                                bg-gray-700
-                                px-2
-                                py-0.5
-                                rounded
-                                text-gray-300">
-
-                                ${r.jenis}
-
+                            <span class="text-[10px] bg-gray-700 text-gray-300 px-2 py-0.5 rounded">
+                                ${escapeHtml(item.jenis)}
                             </span>
 
                             ${statusBadge}
@@ -2582,803 +1407,1203 @@
                         </div>
 
 
-                        <div class="
-                            text-xs
-                            text-gray-400
-                            mt-0.5">
+                        <div class="text-[10px] text-gray-400 mt-1">
 
-                            🕒 ${r.waktu}
+                            🕒 ${escapeHtml(item.waktu)}
 
                         </div>
 
                     </div>
 
 
-                    <div class="
-                        text-right
-                        flex
-                        items-center
-                        gap-1.5">
+                    <div class="text-right shrink-0">
 
-                        <div class="
-                            font-extrabold
-                            text-green-400
-                            mr-1">
+                        <div class="font-extrabold text-green-400 text-xs">
 
-                            Rp ${Number(r.biaya).toLocaleString('id-ID')}
+                            Rp ${(Number(item.biaya) || 0).toLocaleString("id-ID")}
 
                         </div>
 
 
-                        <button
-                            onclick="previewStruk('${r.id}', '${r.posKey}')"
-                            class="
-                                bg-blue-600
-                                hover:bg-blue-500
-                                text-white
-                                text-[10px]
-                                px-2
-                                py-1.5
-                                rounded-lg
-                                font-bold
-                                shadow
-                                transition">
+                        <div class="flex gap-1 mt-1">
 
-                            🖨️
+                            <button
+                                onclick="previewStruk('${item.id}')"
+                                class="bg-blue-600 text-white text-[10px] px-2 py-1.5 rounded-lg">
+                                🖨️
+                            </button>
 
-                        </button>
+                            ${hapus}
 
-
-                        ${btnHapusHtml}
+                        </div>
 
                     </div>
 
                 </div>
 
-            `;
+            </div>
+
+        `;
+
+    });
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeHtml(text) {
+
+    return String(text ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+
+}
+
+
+/* =========================================================
+   SIMPAN TRANSAKSI
+========================================================= */
+
+function simpanDanCetak() {
+
+    const input =
+        document.getElementById(
+            "platNomor"
+        );
+
+
+    const plat =
+        input.value
+        .trim()
+        .toUpperCase();
+
+
+    if (!plat) {
+
+        alert(
+            "Nomor plat tidak boleh kosong!"
+        );
+
+        return;
+
+    }
+
+
+    if (
+        currentSesi !== "parkir1" &&
+        currentSesi !== "parkir2" &&
+        currentSesi !== "parkir3" &&
+        currentSesi !== "parkir4" &&
+        currentSesi !== "superadmin"
+    ) {
+
+        alert(
+            "Akun ini tidak dapat memasukkan kendaraan."
+        );
+
+        return;
+
+    }
+
+
+    const jenis =
+        document.getElementById(
+            "jenisKendaraan"
+        ).value;
+
+
+    const id =
+        Date.now();
+
+
+    const namaPos =
+        currentSesi.startsWith("parkir")
+
+        ? "Pos " +
+          currentSesi.replace(
+              "parkir",
+              ""
+          )
+
+        : "Super Admin";
+
+
+    const now =
+        new Date();
+
+
+    const item = {
+
+        id: id,
+
+        plat: plat,
+
+        jenis: jenis,
+
+        waktu:
+            now.toLocaleDateString(
+                "id-ID"
+            ) +
+            " " +
+            now.toLocaleTimeString(
+                "id-ID",
+                {
+                    hour:"2-digit",
+                    minute:"2-digit"
+                }
+            ),
+
+        biaya:
+            tarif[jenis],
+
+        status:
+            "Di Dalam",
+
+        posAsal:
+            namaPos
+
+    };
+
+
+    database
+        .ref(
+            `parkir_data/${currentSesi}/${id}`
+        )
+        .set(item)
+        .then(() => {
+
+            input.value = "";
+
+            showToast(
+                plat +
+                " tersimpan di " +
+                namaPos
+            );
+
+            currentPreviewData =
+                item;
+
+        })
+        .catch(error => {
+
+            alert(
+                "Gagal menyimpan: " +
+                error.message
+            );
 
         });
 
+}
+
+
+/* =========================================================
+   HAPUS TRANSAKSI
+========================================================= */
+
+function hapusTransaksi(
+    posKey,
+    id
+) {
+
+    if (
+        currentSesi !== "superadmin"
+    ) {
+
+        alert(
+            "Akses ditolak!"
+        );
+
+        return;
+
     }
 
 
-    /* =====================================================
-       SCANNER
-    ===================================================== */
-
-    function mulaiScan() {
-
-        if (!html5QrCode) {
-
-            html5QrCode =
-                new Html5Qrcode(
-                    "reader"
-                );
-
-        }
+    if (
+        !confirm(
+            "Hapus transaksi ini?"
+        )
+    ) return;
 
 
-        navigator
-            .mediaDevices
-            .getUserMedia({
-                video: {
-                    facingMode:
-                        "environment"
-                }
-            })
+    database
+        .ref(
+            `parkir_data/${posKey}/${id}`
+        )
+        .remove()
+        .then(() => {
 
-            .then(stream => {
-
-                mediaStream =
-                    stream;
-
-            })
-
-            .catch(err => {
-
-                console.log(
-                    "Gagal ambil stream:",
-                    err
-                );
-
-            });
-
-
-        html5QrCode
-            .start(
-
-                {
-                    facingMode:
-                        "environment"
-                },
-
-                {
-                    fps: 10,
-                    qrbox: 200
-                },
-
-                decodedText => {
-
-                    const id =
-                        decodedText
-                            .split('-')
-                            .pop();
-
-
-                    const found =
-                        dataMasuk.find(
-                            x =>
-                                x.id.toString() ===
-                                id
-                        );
-
-
-                    if (found) {
-
-                        if (
-                            found.status ===
-                            'Keluar'
-                        ) {
-
-                            return alert(
-                                "Kendaraan sudah tercatat keluar sebelumnya!"
-                            );
-
-                        }
-
-
-                        stopCamera();
-
-                        bukaModalKeluar(
-                            found.id,
-                            found.posKey
-                        );
-
-
-                    } else {
-
-                        alert(
-                            "Barcode tiket tidak terdaftar di sistem!"
-                        );
-
-                    }
-
-                }
-
-            )
-
-            .then(() => {
-
-                const btnStart =
-                    document.getElementById(
-                        'btnStartCam'
-                    );
-
-                const btnStop =
-                    document.getElementById(
-                        'btnStopCam'
-                    );
-
-                const btnTorch =
-                    document.getElementById(
-                        'btnTorch'
-                    );
-
-
-                if (btnStart)
-                    btnStart.classList.add(
-                        'hidden'
-                    );
-
-
-                if (btnStop)
-                    btnStop.classList.remove(
-                        'hidden'
-                    );
-
-
-                if (btnTorch)
-                    btnTorch.classList.remove(
-                        'hidden'
-                    );
-
-            })
-
-            .catch(e =>
-                console.log(
-                    "Kamera:",
-                    e
-                )
+            showToast(
+                "Transaksi dihapus!"
             );
 
-    }
+        })
+        .catch(error => {
+
+            alert(
+                "Gagal menghapus: " +
+                error.message
+            );
+
+        });
+
+}
 
 
-    function stopCamera() {
+/* =========================================================
+   TAB
+========================================================= */
 
-        torchOn = false;
+function switchTab(p) {
 
-        updateTorchButtonUI();
-
-
-        if (mediaStream) {
-
-            mediaStream
-                .getTracks()
-                .forEach(
-                    track =>
-                        track.stop()
-                );
-
-            mediaStream = null;
-
-        }
+    document
+        .getElementById("page1")
+        .classList.toggle(
+            "hidden",
+            p !== 1
+        );
 
 
-        if (
-            html5QrCode &&
-            html5QrCode.isScanning
-        ) {
-
-            html5QrCode
-                .stop()
-
-                .then(() => {
-
-                    const btnStart =
-                        document.getElementById(
-                            'btnStartCam'
-                        );
-
-                    const btnStop =
-                        document.getElementById(
-                            'btnStopCam'
-                        );
-
-                    const btnTorch =
-                        document.getElementById(
-                            'btnTorch'
-                        );
+    document
+        .getElementById("page2")
+        .classList.toggle(
+            "hidden",
+            p !== 2
+        );
 
 
-                    if (btnStart)
-                        btnStart.classList.remove(
-                            'hidden'
-                        );
+    document
+        .getElementById("page3")
+        .classList.toggle(
+            "hidden",
+            p !== 3
+        );
 
 
-                    if (btnStop)
-                        btnStop.classList.add(
-                            'hidden'
-                        );
+    if (p !== 3)
+        stopCamera();
+
+}
 
 
-                    if (btnTorch)
-                        btnTorch.classList.add(
-                            'hidden'
-                        );
+/* =========================================================
+   BLUETOOTH PRINTER
+========================================================= */
 
-                })
+async function connectBluetooth() {
 
-                .catch(() => {});
+    try {
 
-        }
-
-    }
-
-
-    /* =====================================================
-       TORCH
-    ===================================================== */
-
-    async function toggleTorch() {
-
-        try {
-
-            if (!mediaStream) {
-
-                mediaStream =
-                    await navigator
-                        .mediaDevices
-                        .getUserMedia({
-
-                            video: {
-                                facingMode:
-                                    "environment"
-                            }
-
-                        });
-
-            }
+        document
+            .getElementById(
+                "statusPrinter"
+            )
+            .innerText =
+                "Mencari...";
 
 
-            const track =
-                mediaStream
-                    .getVideoTracks()[0];
+        bluetoothDevice =
+            await navigator.bluetooth.requestDevice({
 
+                acceptAllDevices: true,
 
-            if (!track) {
-
-                return alert(
-                    "Kamera tidak ditemukan."
-                );
-
-            }
-
-
-            torchOn =
-                !torchOn;
-
-
-            await track.applyConstraints({
-
-                advanced: [
-                    {
-                        torch:
-                            torchOn
-                    }
+                optionalServices: [
+                    "000018f0-0000-1000-8000-00805f9b34fb"
                 ]
 
             });
 
 
-            updateTorchButtonUI();
+        const server =
+            await bluetoothDevice.gatt.connect();
 
 
-        } catch (err) {
-
-            alert(
-                "Fitur senter tidak didukung di perangkat/browser ini."
+        const service =
+            await server.getPrimaryService(
+                "000018f0-0000-1000-8000-00805f9b34fb"
             );
 
-        }
+
+        const chars =
+            await service.getCharacteristics();
+
+
+        bluetoothCharacteristic =
+            chars.find(
+                c =>
+                    c.properties.write ||
+                    c.properties.writeWithoutResponse
+            );
+
+
+        document
+            .getElementById(
+                "statusPrinter"
+            )
+            .innerText =
+                "Connected ✓";
+
+
+        showToast(
+            "Printer terhubung!"
+        );
 
     }
 
+    catch(error) {
 
-    function updateTorchButtonUI() {
-
-        const btnTorch =
-            document.getElementById(
-                'btnTorch'
-            );
-
-
-        if (!btnTorch) return;
+        document
+            .getElementById(
+                "statusPrinter"
+            )
+            .innerText =
+                "Printer";
 
 
-        if (torchOn) {
-
-            btnTorch.innerText =
-                "🔦 Senter: ON";
-
-
-            btnTorch.className =
-                "text-xs bg-yellow-600 hover:bg-yellow-500 text-black px-2.5 py-1.5 rounded-lg font-bold";
-
-
-        } else {
-
-            btnTorch.innerText =
-                "🔦 Senter: OFF";
-
-
-            btnTorch.className =
-                "text-xs bg-gray-700 hover:bg-gray-600 text-yellow-300 px-2.5 py-1.5 rounded-lg font-semibold";
-
-        }
+        alert(
+            "Koneksi gagal: " +
+            error.message
+        );
 
     }
 
-
-    /* =====================================================
-       CARI MANUAL
-    ===================================================== */
-
-    function prosesCariManual() {
-
-        const query =
-            document
-                .getElementById(
-                    'cariPlatKeluar'
-                )
-                .value
-                .trim()
-                .toUpperCase();
+}
 
 
-        if (!query) return;
+/* =========================================================
+   SCAN
+========================================================= */
 
+function mulaiScan() {
 
-        const found =
-            dataMasuk.find(
-                x =>
-                    x.plat.includes(
-                        query
-                    ) &&
-                    x.status ===
-                    'Di Dalam'
+    if (!html5QrCode)
+        html5QrCode =
+            new Html5Qrcode(
+                "reader"
             );
 
 
-        if (found) {
+    html5QrCode.start(
 
-            bukaModalKeluar(
-                found.id,
-                found.posKey
-            );
+        {
+            facingMode:
+                "environment"
+        },
 
-        } else {
+        {
+            fps: 10,
+            qrbox: 200
+        },
 
-            alert(
-                "Kendaraan aktif dengan plat tersebut tidak ditemukan."
-            );
+        decodedText => {
 
-        }
-
-    }
-
-
-    /* =====================================================
-       MODAL KELUAR
-    ===================================================== */
-
-    function bukaModalKeluar(
-        id,
-        posKey = null
-    ) {
-
-        let d;
+            const id =
+                decodedText
+                .split("-")
+                .pop();
 
 
-        if (posKey) {
-
-            d =
+            const found =
                 dataMasuk.find(
                     x =>
-                        x.id == id &&
-                        x.posKey === posKey
+                        String(x.id) ===
+                        String(id)
                 );
 
-        } else {
 
-            d =
-                dataMasuk.find(
-                    x =>
-                        x.id == id
-                );
-
-        }
-
-
-        if (!d) {
-
-            return alert(
-                "Data kendaraan tidak ditemukan."
-            );
-
-        }
-
-
-        selectedKeluarId =
-            id;
-
-
-        /*
-           Simpan posKey supaya status
-           diubah pada folder yang benar.
-        */
-
-        window.selectedKeluarPosKey =
-            d.posKey;
-
-
-        document
-            .getElementById(
-                'detailKeluar'
-            )
-            .innerHTML = `
-
-                <b>Plat:</b>
-                ${d.plat}
-
-                <br>
-
-                <b>Pos Asal:</b>
-                ${d.posAsal}
-
-                <br>
-
-                <b>Biaya:</b>
-                Rp ${Number(d.biaya).toLocaleString('id-ID')}
-
-            `;
-
-
-        document
-            .getElementById(
-                'modalKeluar'
-            )
-            .classList
-            .remove('hidden');
-
-    }
-
-
-    function closeModalKeluar() {
-
-        document
-            .getElementById(
-                'modalKeluar'
-            )
-            .classList
-            .add('hidden');
-
-
-        if (
-            currentSesi ===
-            'poskeluar'
-        ) {
-
-            setTimeout(
-                mulaiScan,
-                500
-            );
-
-        }
-
-    }
-
-
-    /* =====================================================
-       KONFIRMASI KELUAR
-    ===================================================== */
-
-    function konfirmasiKeluar() {
-
-        const d =
-            dataMasuk.find(
-                x =>
-                    x.id == selectedKeluarId &&
-                    x.posKey ===
-                    window.selectedKeluarPosKey
-            );
-
-
-        if (!d) {
-
-            return alert(
-                "Data kendaraan tidak ditemukan."
-            );
-
-        }
-
-
-        /*
-           PERBAIKAN:
-           Status diubah menggunakan posKey asli.
-           Jadi Pos 1 tidak akan salah diarahkan
-           ke folder lain.
-        */
-
-        const posKey =
-            d.posKey;
-
-
-        database
-            .ref(
-                `parkir_data/${posKey}/${selectedKeluarId}/status`
-            )
-            .set('Keluar')
-
-            .then(() => {
-
-                closeModalKeluar();
-
-                showToast(
-                    "Status Keluar Disimpan ke Server!"
-                );
-
-            })
-
-            .catch(err => {
+            if (!found) {
 
                 alert(
-                    "Gagal menyimpan status keluar: " +
-                    err.message
+                    "Barcode tidak ditemukan!"
                 );
 
-            });
+                return;
+
+            }
+
+
+            if (
+                found.status ===
+                "Keluar"
+            ) {
+
+                alert(
+                    "Kendaraan sudah keluar!"
+                );
+
+                return;
+
+            }
+
+
+            stopCamera();
+
+            bukaModalKeluar(
+                found.id
+            );
+
+        }
+
+    )
+    .then(() => {
+
+        document
+            .getElementById(
+                "btnStartCam"
+            )
+            .classList.add(
+                "hidden"
+            );
+
+        document
+            .getElementById(
+                "btnStopCam"
+            )
+            .classList.remove(
+                "hidden"
+            );
+
+    })
+    .catch(error => {
+
+        console.error(
+            error
+        );
+
+    });
+
+}
+
+
+/* =========================================================
+   STOP CAMERA
+========================================================= */
+
+function stopCamera() {
+
+    if (
+        html5QrCode &&
+        html5QrCode.isScanning
+    ) {
+
+        html5QrCode
+            .stop()
+            .catch(() => {});
 
     }
 
 
-    /* =====================================================
-       PASSWORD SUPER ADMIN
-    ===================================================== */
+    if (mediaStream) {
 
-    function simpanPasswordBaru() {
-
-        if (
-            currentSesi !==
-            'superadmin'
-        ) {
-
-            return alert(
-                "Akses ditolak! Fitur ini khusus Super Admin."
+        mediaStream
+            .getTracks()
+            .forEach(
+                track =>
+                    track.stop()
             );
 
-        }
+        mediaStream = null;
+
+    }
 
 
-        const targetPosEl =
-            document.getElementById(
-                'targetSesiPass'
-            );
+    const start =
+        document.getElementById(
+            "btnStartCam"
+        );
 
-
-        const inputPassEl =
-            document.getElementById(
-                'inputPasswordBaru'
-            );
-
-
-        if (
-            !targetPosEl ||
-            !inputPassEl
-        ) {
-
-            return;
-
-        }
-
-
-        const targetPos =
-            targetPosEl.value;
-
-
-        const newPass =
-            inputPassEl.value.trim();
-
-
-        if (!newPass) {
-
-            return alert(
-                "Password baru tidak boleh kosong!"
-            );
-
-        }
-
-
-        dbPasswords[targetPos] =
-            newPass;
-
-
-        localStorage.setItem(
-            'parkir_db_passwords',
-            JSON.stringify(
-                dbPasswords
-            )
+    const stop =
+        document.getElementById(
+            "btnStopCam"
         );
 
 
-        inputPassEl.value = "";
+    if (start)
+        start.classList.remove(
+            "hidden"
+        );
+
+    if (stop)
+        stop.classList.add(
+            "hidden"
+        );
+
+}
 
 
-        database
-            .ref(
-                `settings/passwords/${targetPos}`
+/* =========================================================
+   CARI MANUAL
+========================================================= */
+
+function prosesCariManual() {
+
+    const q =
+        document
+            .getElementById(
+                "cariPlatKeluar"
             )
-            .set(newPass)
+            .value
+            .trim()
+            .toUpperCase();
 
-            .then(() => {
 
-                showToast(
-                    `Password ${targetPos.toUpperCase()} Berhasil Diperbarui!`
-                );
+    if (!q) return;
 
-            })
 
-            .catch(err => {
+    const found =
+        dataMasuk.find(
+            x =>
+                x.plat
+                    .toUpperCase()
+                    .includes(q) &&
+                x.status ===
+                    "Di Dalam"
+        );
 
-                showToast(
-                    "Password tersimpan secara lokal."
-                );
 
-            });
+    if (!found) {
+
+        alert(
+            "Kendaraan aktif tidak ditemukan!"
+        );
+
+        return;
 
     }
 
 
-    /* =====================================================
-       EXPORT EXCEL
-    ===================================================== */
+    bukaModalKeluar(
+        found.id
+    );
 
-    function exportToExcel() {
-
-        if (!dataMasuk.length) {
-
-            return alert(
-                "Data masih kosong!"
-            );
-
-        }
+}
 
 
-        let html = `
+/* =========================================================
+   MODAL KELUAR
+========================================================= */
 
-            <table border="1">
+function bukaModalKeluar(id) {
 
-                <tr>
+    const d =
+        dataMasuk.find(
+            x =>
+                String(x.id) ===
+                String(id)
+        );
 
-                    <th>Pos</th>
-                    <th>Waktu</th>
-                    <th>Plat</th>
-                    <th>Jenis</th>
-                    <th>Biaya</th>
-                    <th>Status</th>
 
-                </tr>
+    if (!d) return;
+
+
+    selectedKeluarId =
+        d.id;
+
+
+    document
+        .getElementById(
+            "detailKeluar"
+        )
+        .innerHTML = `
+
+            <b>Plat:</b>
+            ${escapeHtml(d.plat)}
+            <br>
+
+            <b>Pos Asal:</b>
+            ${escapeHtml(d.posAsal)}
+            <br>
+
+            <b>Jenis:</b>
+            ${escapeHtml(d.jenis)}
+            <br>
+
+            <b>Biaya:</b>
+            Rp ${(Number(d.biaya) || 0)
+                .toLocaleString("id-ID")}
 
         `;
 
 
-        dataMasuk.forEach(d => {
+    document
+        .getElementById(
+            "modalKeluar"
+        )
+        .classList.remove(
+            "hidden"
+        );
 
-            html += `
+}
 
-                <tr>
 
-                    <td>${d.posAsal}</td>
+function closeModalKeluar() {
 
-                    <td>${d.waktu}</td>
+    document
+        .getElementById(
+            "modalKeluar"
+        )
+        .classList.add(
+            "hidden"
+        );
 
-                    <td>${d.plat}</td>
+}
 
-                    <td>${d.jenis}</td>
 
-                    <td>${d.biaya}</td>
+/* =========================================================
+   KONFIRMASI KELUAR
+========================================================= */
 
-                    <td>${d.status}</td>
+function konfirmasiKeluar() {
 
-                </tr>
+    const d =
+        dataMasuk.find(
+            x =>
+                String(x.id) ===
+                String(selectedKeluarId)
+        );
 
-            `;
+
+    if (!d) return;
+
+
+    let posKey =
+        d.posKey;
+
+
+    if (!posKey) {
+
+        const nomor =
+            d.posAsal
+                .replace(
+                    /[^0-9]/g,
+                    ""
+                );
+
+
+        posKey =
+            nomor
+            ? "parkir" + nomor
+            : "superadmin";
+
+    }
+
+
+    database
+        .ref(
+            `parkir_data/${posKey}/${d.id}/status`
+        )
+        .set("Keluar")
+        .then(() => {
+
+            closeModalKeluar();
+
+            showToast(
+                "Status kendaraan: KELUAR"
+            );
+
+        })
+        .catch(error => {
+
+            alert(
+                "Gagal update: " +
+                error.message
+            );
 
         });
 
-
-        html +=
-            `</table>`;
+}
 
 
-        const a =
-            document.createElement(
-                'a'
-            );
+/* =========================================================
+   PREVIEW STRUK
+========================================================= */
+
+function previewStruk(id) {
+
+    const item =
+        dataMasuk.find(
+            x =>
+                String(x.id) ===
+                String(id)
+        );
 
 
-        a.href =
-            URL.createObjectURL(
-
-                new Blob(
-                    [html],
-                    {
-                        type:
-                            'application/vnd.ms-excel'
-                    }
-                )
-
-            );
+    if (!item) return;
 
 
-        a.download =
-            `Rekap_Parkir_${currentSesi}.xls`;
+    currentPreviewData =
+        item;
 
 
-        a.click();
+    document
+        .getElementById(
+            "previewReceiptContent"
+        )
+        .innerHTML = `
+
+            <b>PANITIA PARKIR KARNAVAL</b>
+
+            <br>
+            --------------------------------
+
+            <br><br>
+
+            <b style="font-size:18px">
+                ${escapeHtml(item.plat)}
+            </b>
+
+            <br><br>
+
+            Pos :
+            ${escapeHtml(item.posAsal)}
+
+            <br>
+
+            Jenis :
+            ${escapeHtml(item.jenis)}
+
+            <br>
+
+            Masuk :
+            ${escapeHtml(item.waktu)}
+
+            <br>
+
+            Bayar :
+            Rp ${(Number(item.biaya) || 0)
+                .toLocaleString("id-ID")}
+
+            <br>
+
+            Status :
+            ${escapeHtml(item.status)}
+
+            <br><br>
+
+            --------------------------------
+
+            <br>
+
+            Struk hilang tunjukkan STNK /
+            NO RANGKA sesuai tiket parkir.
+
+            <br><br>
+
+            TERIMAKASIH
+
+        `;
+
+
+    document
+        .getElementById(
+            "modalPreviewStruk"
+        )
+        .classList.remove(
+            "hidden"
+        );
+
+}
+
+
+function closeModalPreview() {
+
+    document
+        .getElementById(
+            "modalPreviewStruk"
+        )
+        .classList.add(
+            "hidden"
+        );
+
+}
+
+
+/* =========================================================
+   PASSWORD
+========================================================= */
+
+function simpanPasswordBaru() {
+
+    if (
+        currentSesi !==
+        "superadmin"
+    ) {
+
+        alert(
+            "Akses ditolak!"
+        );
+
+        return;
 
     }
+
+
+    const target =
+        document
+            .getElementById(
+                "targetSesiPass"
+            )
+            .value;
+
+
+    const pass =
+        document
+            .getElementById(
+                "inputPasswordBaru"
+            )
+            .value
+            .trim();
+
+
+    if (!pass) {
+
+        alert(
+            "Password tidak boleh kosong!"
+        );
+
+        return;
+
+    }
+
+
+    database
+        .ref(
+            `settings/passwords/${target}`
+        )
+        .set(pass)
+        .then(() => {
+
+            dbPasswords[target] =
+                pass;
+
+            localStorage.setItem(
+                "parkir_db_passwords",
+                JSON.stringify(
+                    dbPasswords
+                )
+            );
+
+
+            document
+                .getElementById(
+                    "inputPasswordBaru"
+                )
+                .value = "";
+
+
+            showToast(
+                "Password berhasil diperbarui!"
+            );
+
+        })
+        .catch(error => {
+
+            alert(
+                "Gagal: " +
+                error.message
+            );
+
+        });
+
+}
+
+
+/* =========================================================
+   RESET DATA
+========================================================= */
+
+function resetSemuaData() {
+
+    if (
+        currentSesi !==
+        "superadmin"
+    ) {
+
+        alert(
+            "Akses ditolak!"
+        );
+
+        return;
+
+    }
+
+
+    if (
+        !confirm(
+            "Hapus SEMUA transaksi Pos 1-4?"
+        )
+    ) return;
+
+
+    const daftar =
+        [
+            "parkir1",
+            "parkir2",
+            "parkir3",
+            "parkir4",
+            "superadmin"
+        ];
+
+
+    Promise.all(
+
+        daftar.map(
+            pos =>
+                database
+                    .ref(
+                        "parkir_data/" +
+                        pos
+                    )
+                    .remove()
+        )
+
+    )
+    .then(() => {
+
+        localStorage.clear();
+
+        alert(
+            "Semua data berhasil dihapus."
+        );
+
+        location.reload();
+
+    })
+    .catch(error => {
+
+        alert(
+            "Gagal reset: " +
+            error.message
+        );
+
+    });
+
+}
+
+
+/* =========================================================
+   EXPORT EXCEL
+========================================================= */
+
+function exportToExcel() {
+
+    if (!dataMasuk.length) {
+
+        alert(
+            "Tidak ada data!"
+        );
+
+        return;
+
+    }
+
+
+    let html = `
+
+        <table border="1">
+
+        <tr>
+            <th>Pos</th>
+            <th>Waktu</th>
+            <th>Plat</th>
+            <th>Jenis</th>
+            <th>Biaya</th>
+            <th>Status</th>
+        </tr>
+
+    `;
+
+
+    dataMasuk.forEach(d => {
+
+        html += `
+
+            <tr>
+
+                <td>${d.posAsal}</td>
+
+                <td>${d.waktu}</td>
+
+                <td>${d.plat}</td>
+
+                <td>${d.jenis}</td>
+
+                <td>${d.biaya}</td>
+
+                <td>${d.status}</td>
+
+            </tr>
+
+        `;
+
+    });
+
+
+    html += "</table>";
+
+
+    const blob =
+        new Blob(
+            [html],
+            {
+                type:
+                    "application/vnd.ms-excel"
+            }
+        );
+
+
+    const a =
+        document.createElement("a");
+
+
+    a.href =
+        URL.createObjectURL(blob);
+
+
+    a.download =
+        `Rekap_Parkir_${currentSesi}.xls`;
+
+
+    a.click();
+
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+function showToast(text) {
+
+    const toast =
+        document.getElementById(
+            "toastNotif"
+        );
+
+
+    document.getElementById(
+        "toastText"
+    ).innerText =
+        text;
+
+
+    toast.classList.remove(
+        "-translate-y-20",
+        "opacity-0"
+    );
+
+
+    toast.classList.add(
+        "translate-y-0",
+        "opacity-100"
+    );
+
+
+    setTimeout(() => {
+
+        toast.classList.remove(
+            "translate-y-0",
+            "opacity-100"
+        );
+
+        toast.classList.add(
+            "-translate-y-20",
+            "opacity-0"
+        );
+
+    },3000);
+
+}
+
+
+/* =========================================================
+   RESET PASSWORD DARURAT
+========================================================= */
+
+function resetPasswordDarurat() {
+
+    const data = {
+
+        parkir1:"123",
+        parkir2:"123",
+        parkir3:"123",
+        parkir4:"123",
+        poskeluar:"123",
+        superadmin:"123"
+
+    };
+
+
+    database
+        .ref(
+            "settings/passwords"
+        )
+        .set(data)
+        .then(() => {
+
+            localStorage.setItem(
+                "parkir_db_passwords",
+                JSON.stringify(data)
+            );
+
+            dbPasswords =
+                data;
+
+
+            alert(
+                "Semua password kembali ke 123."
+            );
+
+        })
+        .catch(error => {
+
+            alert(
+                "Gagal reset: " +
+                error.message
+            );
+
+        });
+
+}
+
+
+/* =========================================================
+   PRINT BUTTON
+========================================================= */
+
+document
+    .getElementById(
+        "btnExecutePrint"
+    )
+    .onclick = function() {
+
+        alert(
+            "Printer Bluetooth gunakan fungsi cetak dari versi printer Anda."
+        );
+
+    };
+
+
+/* =========================================================
+   ON LOAD
+========================================================= */
+
+window.onload = function() {
+
+    if (currentSesi) {
+
+        bukaAplikasi(
+            currentSesi
+        );
+
+    }
+
+};
 
 </script>
 
