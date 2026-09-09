@@ -270,8 +270,7 @@
             loadDataFromLocalCache();
 
             if (activeListener) {
-                let oldPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
-                database.ref(oldPath).off('value', activeListener);
+                database.ref('parkir_data').off('value', activeListener);
             }
             
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
@@ -279,7 +278,7 @@
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 prosesDataSnapshot(snapshot);
             }, (error) => {
-                console.log("Koneksi offline/loyo terdeteksi, menggunakan cache lokal:", error);
+                console.log("Koneksi offline terdeteksi, menggunakan cache lokal:", error);
             });
         }
 
@@ -302,7 +301,7 @@
             
             database.ref(refPath).once('value').then((snapshot) => {
                 prosesDataSnapshot(snapshot);
-                showToast("Data disinkronkan dari Firebase!");
+                showToast("Data semua pos disinkronkan dari Firebase!");
                 if(txt) txt.innerText = "Refresh";
             }).catch((err) => {
                 showToast("Gagal terhubung ke server, menggunakan data lokal.");
@@ -316,40 +315,29 @@
                 let val = snapshot.val();
                 if (val && typeof val === 'object') {
                     let keys = Object.keys(val);
-                    let isNested = keys.some(k => k.startsWith('parkir') || (val[k] && typeof val[k] === 'object' && !val[k].id && !val[k].plat));
-
-                    if (isNested || currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                        keys.forEach(k => {
-                            let subVal = val[k];
-                            if (subVal && typeof subVal === 'object') {
-                                if (subVal.id && subVal.plat) {
-                                    gabungan.push(subVal);
-                                } else {
-                                    Object.values(subVal).forEach(item => {
-                                        if (item && typeof item === 'object' && (item.id || item.plat)) {
-                                            gabungan.push(item);
-                                        }
-                                    });
-                                }
-                            }
-                        });
-                    }
                     
-                    if (gabungan.length === 0) {
-                        Object.values(val).forEach(item => {
-                            if (item && typeof item === 'object') {
-                                if (item.id || item.plat) {
-                                    gabungan.push(item);
-                                } else {
-                                    Object.values(item).forEach(subItem => {
-                                        if (subItem && typeof subItem === 'object' && (subItem.id || subItem.plat)) {
-                                            gabungan.push(subItem);
+                    keys.forEach(k => {
+                        let subVal = val[k];
+                        if (subVal && typeof subVal === 'object') {
+                            if (subVal.id && subVal.plat) {
+                                gabungan.push(subVal);
+                            } else {
+                                Object.values(subVal).forEach(item => {
+                                    if (item && typeof item === 'object') {
+                                        if (item.id && item.plat) {
+                                            gabungan.push(item);
+                                        } else {
+                                            Object.values(item).forEach(subItem => {
+                                                if (subItem && typeof subItem === 'object' && (subItem.id || subItem.plat)) {
+                                                    gabungan.push(subItem);
+                                                }
+                                            });
                                         }
-                                    });
-                                }
+                                    }
+                                });
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             }
             
