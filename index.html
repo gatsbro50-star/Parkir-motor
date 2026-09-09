@@ -78,6 +78,17 @@
             <!-- HALAMAN 1: Input -->
             <div id="page1" class="space-y-4">
                 <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 space-y-4">
+                    <!-- PILIHAN POS UNTUK INPUT (Aktif jika Super Admin, Terkunci jika Pos Biasa) -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Pos Input Transaksi</label>
+                        <select id="pilihPosInput" class="w-full p-3.5 bg-gray-900 border border-gray-700 rounded-xl text-base font-semibold text-white focus:outline-none focus:border-blue-500">
+                            <option value="parkir1">Pos Parkir 1</option>
+                            <option value="parkir2">Pos Parkir 2</option>
+                            <option value="parkir3">Pos Parkir 3</option>
+                            <option value="parkir4">Pos Parkir 4</option>
+                        </select>
+                    </div>
+
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Plat Nomor / No Rangka</label>
                         <input type="text" id="platNomor" required placeholder="B 1234 XYZ" 
@@ -316,7 +327,7 @@
                 let val = snapshot.val();
                 
                 if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                    // FITUR UTAMA: Menyisir seluruh cabang folder di dalam parkir_data (parkir1, parkir2, parkir3, parkir4)
+                    // Menyisir seluruh folder pos (parkir1, parkir2, parkir3, parkir4) di dalam parkir_data
                     Object.keys(val).forEach(folderKey => {
                         let folderData = val[folderKey];
                         
@@ -431,12 +442,14 @@
             let badge = document.getElementById('badgeSesi');
             let panelSuperAdmin = document.getElementById('panelSuperAdmin');
             let navTabs = document.getElementById('navTabsContainer');
+            let selectPosInput = document.getElementById('pilihPosInput');
 
             if (sesi === 'superadmin') {
                 badge.innerText = "👑 Super Admin (All Pos)";
                 badge.className = "text-[10px] bg-purple-900 text-purple-200 px-2 py-0.5 rounded-full font-bold";
                 panelSuperAdmin.classList.remove('hidden');
                 navTabs.classList.remove('hidden');
+                selectPosInput.disabled = false; // Super Admin bisa memilih mau input ke pos berapa
                 switchTab(1);
             } else if (sesi === 'poskeluar') {
                 badge.innerText = "🚪 Pos Keluar";
@@ -449,6 +462,10 @@
                 badge.className = "text-[10px] bg-blue-900 text-blue-200 px-2 py-0.5 rounded-full font-bold";
                 panelSuperAdmin.classList.add('hidden');
                 navTabs.classList.remove('hidden');
+                
+                // Jika login sebagai pos mandiri, kunci pilihan pos input sesuai posnya
+                selectPosInput.value = sesi;
+                selectPosInput.disabled = true; 
                 switchTab(1);
             }
             initRealtimeDataListener();
@@ -614,9 +631,9 @@
             const plat = platInput.value.trim().toUpperCase();
             if (!plat) return alert("Nomor plat tidak boleh kosong!");
 
-            let targetPos = currentSesi; 
-            let namaPosLabel = currentSesi.includes('parkir') ? 'Pos ' + currentSesi.replace('parkir', '') : 
-                               currentSesi === 'superadmin' ? 'Super Admin' : 'Pos Keluar';
+            // FIX UTAMA: Ambil target pos dari dropdown input (pos 1, 2, 3, atau 4)
+            let targetPos = document.getElementById('pilihPosInput').value; 
+            let namaPosLabel = 'Pos ' + targetPos.replace('parkir', '');
 
             const jenis = document.getElementById('jenisKendaraan').value;
             const now = new Date();
@@ -633,7 +650,7 @@
             };
 
             platInput.value = '';
-            showToast(`Tersimpan: ${plat}`);
+            showToast(`Tersimpan di ${namaPosLabel}: ${plat}`);
             currentPreviewData = item;
             
             dataMasuk.unshift(item);
