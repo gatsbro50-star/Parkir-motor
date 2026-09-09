@@ -264,7 +264,7 @@
         });
 
         // ==========================================
-        // ARSITEKTUR OFFLINE-FIRST & MULTI-POS REKURSIF
+        // SISTEM LISTENER & MULTI-POS SUPER ADMIN (PASTI DETEK)
         // ==========================================
         function initRealtimeDataListener() {
             loadDataFromLocalCache();
@@ -273,13 +273,13 @@
                 database.ref('parkir_data').off('value', activeListener);
             }
             
-            // Jika Super Admin atau Pos Keluar, dengarkan root 'parkir_data' agar semua pos terbaca
+            // Tentukan jalur path database berdasarkan sesi yang aktif
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 prosesDataSnapshot(snapshot);
             }, (error) => {
-                console.log("Koneksi offline terdeteksi, menggunakan cache lokal:", error);
+                console.log("Mode offline aktif, memuat cache lokal:", error);
             });
         }
 
@@ -302,7 +302,7 @@
             
             database.ref(refPath).once('value').then((snapshot) => {
                 prosesDataSnapshot(snapshot);
-                showToast("Data semua pos disinkronkan dari Server!");
+                showToast("Data dari seluruh pos berhasil disinkronkan!");
                 if(txt) txt.innerText = "Refresh";
             }).catch((err) => {
                 showToast("Gagal terhubung ke server, menggunakan data lokal.");
@@ -312,38 +312,51 @@
 
         function prosesDataSnapshot(snapshot) {
             let gabungan = [];
+            
             if (snapshot.exists()) {
                 let val = snapshot.val();
-                if (val && typeof val === 'object') {
-                    
-                    // Fungsi rekursif untuk menyapu bersih dan menarik data kendaraan dari struktur nested apapun
-                    function ekstrakRekursif(obj) {
-                        if (!obj || typeof obj !== 'object') return;
-
-                        if (obj.id && (obj.plat || obj.nomor_plat)) {
-                            gabungan.push({
-                                id: obj.id,
-                                plat: obj.plat || obj.nomor_plat,
-                                jenis: obj.jenis || 'Motor',
-                                waktu: obj.waktu || obj.waktu_masuk || '-',
-                                biaya: obj.biaya || 0,
-                                status: obj.status || 'Di Dalam',
-                                posAsal: obj.posAsal || 'POS 1'
-                            });
-                            return;
-                        }
-
-                        for (let key in obj) {
-                            if (obj.hasOwnProperty(key)) {
-                                ekstrakRekursif(obj[key]);
+                
+                if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
+                    // Loop eksplisit menyapu pos parkir1, parkir2, parkir3, parkir4
+                    for (let posKey in val) {
+                        let posData = val[posKey];
+                        if (posData && typeof posData === 'object') {
+                            for (let idKey in posData) {
+                                let item = posData[idKey];
+                                if (item && typeof item === 'object') {
+                                    gabungan.push({
+                                        id: item.id || idKey,
+                                        plat: item.plat || item.nomor_plat || '-',
+                                        jenis: item.jenis || 'Motor',
+                                        waktu: item.waktu || item.waktu_masuk || '-',
+                                        biaya: item.biaya || 0,
+                                        status: item.status || 'Di Dalam',
+                                        posAsal: item.posAsal || posKey.toUpperCase().replace('PARKIR', 'Pos ')
+                                    });
+                                }
                             }
                         }
                     }
-
-                    ekstrakRekursif(val);
+                } else {
+                    // Pos spesifik (parkir1 / parkir2 / dll)
+                    for (let idKey in val) {
+                        let item = val[idKey];
+                        if (item && typeof item === 'object') {
+                            gabungan.push({
+                                id: item.id || idKey,
+                                plat: item.plat || item.nomor_plat || '-',
+                                jenis: item.jenis || 'Motor',
+                                waktu: item.waktu || item.waktu_masuk || '-',
+                                biaya: item.biaya || 0,
+                                status: item.status || 'Di Dalam',
+                                posAsal: item.posAsal || currentSesi.toUpperCase().replace('PARKIR', 'Pos ')
+                            });
+                        }
+                    }
                 }
             }
             
+            // Hapus duplikasi berdasarkan ID unik
             let uniqueMap = new Map();
             gabungan.forEach(item => {
                 if (item && item.id) uniqueMap.set(item.id, item);
@@ -353,6 +366,7 @@
             gabungan.sort((a, b) => b.id - a.id);
             dataMasuk = gabungan;
 
+            // Simpan ke cache lokal
             let cacheKey = `parkir_cache_data_${currentSesi}`;
             localStorage.setItem(cacheKey, JSON.stringify(dataMasuk));
 
@@ -609,8 +623,8 @@
             if (!confirm("Yakin ingin menghapus data transaksi ini?")) return;
             let posKey = posAsalText.toLowerCase().replace('pos ', 'parkir').trim();
             database.ref(`parkir_data/${posKey}/${id}`).remove()
-                .then(() => showToast("Transaksi berhasil dihapus dari server!"))
-                .catch(err => alert("Gagal menghapus dari server: " + err.message));
+                .then(() => showToast("Transaksi berhasil dihapus!"))
+                .catch(err => alert("Gagal menghapus: " + err.message));
         }
 
         function resetSemuaData() {
@@ -800,10 +814,10 @@
 
             database.ref(`settings/passwords/${targetPos}`).set(newPass)
                 .then(() => {
-                    showToast(`Password ${targetPos.toUpperCase()} Berhasil Diperbarui di Server!`);
+                    showToast(`Password ${targetPos.toUpperCase()} Berhasil Diperbarui!`);
                 })
                 .catch((err) => {
-                    showToast(`Password tersimpan lokal (Offline).`);
+                    showToast(`Password tersimpan secara lokal.`);
                 });
         }
 
