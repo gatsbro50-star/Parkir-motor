@@ -280,16 +280,17 @@
             }
 
             if (activeListener) {
-                database.ref('parkir_data').off('value', activeListener);
+                let oldRefPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
+                database.ref(oldRefPath).off('value', activeListener);
             }
             
-            // SUPER ADMIN & POS KELUAR MENARIK ROOT UTUH 'parkir_data' AGAR SEMUA POS (1-4) TERDETEKSI
+            // Mengarahkan path listener ke root `parkir_data` jika Super Admin atau Pos Keluar
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 prosesDataSnapshot(snapshot);
             }, (error) => {
-                console.log("Offline mode");
+                console.log("Menggunakan data lokal (Offline mode)");
             });
         }
 
@@ -316,41 +317,50 @@
                 let val = snapshot.val();
                 
                 if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                    // Menyisir seluruh folder pos (parkir1, parkir2, parkir3, parkir4) di dalam parkir_data
+                    // MEMBACA SEMUA FOLDER POS SECARA DINAMIS (parkir1, parkir2, parkir3, parkir4, superadmin)
                     Object.keys(val).forEach(folderKey => {
                         let folderData = val[folderKey];
                         
-                        if (folderData && typeof folderData === 'object') {
+                        if (typeof folderData === 'object' && folderData !== null) {
                             Object.keys(folderData).forEach(idTransaksi => {
                                 let item = folderData[idTransaksi];
                                 
                                 if (item && typeof item === 'object') {
-                                    if (!item.plat && !item.nomor_plat && !item.waktu) {
-                                        Object.keys(item).forEach(subId => {
-                                            let subItem = item[subId];
-                                            if (subItem && typeof subItem === 'object') {
-                                                pushValidItem(gabungan, folderKey, subId, subItem);
-                                            }
-                                        });
-                                    } else {
-                                        pushValidItem(gabungan, folderKey, idTransaksi, item);
-                                    }
+                                    let labelPos = folderKey.includes('parkir') ? `Pos ${folderKey.replace('parkir', '')}` : 
+                                                   folderKey === 'superadmin' ? 'Super Admin' : folderKey;
+
+                                    gabungan.push({
+                                        id: item.id || idTransaksi,
+                                        plat: item.plat || item.nomor_plat || '-',
+                                        jenis: item.jenis || 'Motor',
+                                        waktu: item.waktu || item.waktu_masuk || '-',
+                                        biaya: item.biaya || 0,
+                                        status: item.status || 'Di Dalam',
+                                        posAsal: item.posAsal || labelPos
+                                    });
                                 }
                             });
                         }
                     });
                 } else {
-                    // Pos mandiri (parkir1, parkir2, parkir3, parkir4) membaca datanya sendiri
+                    // Pos mandiri hanya baca isi folder posnya sendiri
                     Object.keys(val).forEach(idTransaksi => {
                         let item = val[idTransaksi];
                         if (item && typeof item === 'object') {
-                            pushValidItem(gabungan, currentSesi, idTransaksi, item);
+                            gabungan.push({
+                                id: item.id || idTransaksi,
+                                plat: item.plat || item.nomor_plat || '-',
+                                jenis: item.jenis || 'Motor',
+                                waktu: item.waktu || item.waktu_masuk || '-',
+                                biaya: item.biaya || 0,
+                                status: item.status || 'Di Dalam',
+                                posAsal: item.posAsal || `Pos ${currentSesi.replace('parkir', '')}`
+                            });
                         }
                     });
                 }
             }
             
-            // Hapus duplikat ID transaksi
             let uniqueMap = new Map();
             gabungan.forEach(item => {
                 if (item && item.id) uniqueMap.set(item.id, item);
@@ -364,21 +374,6 @@
             localStorage.setItem(cacheKey, JSON.stringify(dataMasuk));
 
             render();
-        }
-
-        function pushValidItem(arr, folderKey, id, item) {
-            let labelPos = folderKey.includes('parkir') ? `Pos ${folderKey.replace('parkir', '')}` : 
-                           folderKey === 'superadmin' ? 'Super Admin' : folderKey.toUpperCase();
-
-            arr.push({
-                id: item.id || id,
-                plat: item.plat || item.nomor_plat || item.nopol || '-',
-                jenis: item.jenis || item.kendaraan || 'Motor',
-                waktu: item.waktu || item.waktu_masuk || '-',
-                biaya: Number(item.biaya || item.harga || tarif[item.jenis || 'Motor'] || 10000),
-                status: item.status || 'Di Dalam',
-                posAsal: item.posAsal || labelPos
-            });
         }
 
         window.onload = function() {
@@ -536,7 +531,7 @@
         }
 
         function previewStruk(id) {
-            let item = dataMasuk.find(x => x.id == id);
+            let item = dataMasuk.find(x => x.id === id);
             if (!item) return;
             currentPreviewData = item;
             
@@ -614,10 +609,9 @@
             const plat = platInput.value.trim().toUpperCase();
             if (!plat) return alert("Nomor plat tidak boleh kosong!");
 
-            // KEMBALI NORMAL: Input disimpan ke pos masing-masing yang sedang login (parkir1, parkir2, parkir3, atau parkir4)
-            // Jika yang login Super Admin, input otomatis masuk ke 'parkir1' atau bisa disesuaikan
-            let targetPos = (currentSesi === 'superadmin') ? 'parkir1' : currentSesi; 
-            let namaPosLabel = targetPos.includes('parkir') ? 'Pos ' + targetPos.replace('parkir', '') : 'Pos 1';
+            let targetPos = currentSesi; 
+            let namaPosLabel = currentSesi.includes('parkir') ? 'Pos ' + currentSesi.replace('parkir', '') : 
+                               currentSesi === 'superadmin' ? 'Super Admin' : 'Pos Keluar';
 
             const jenis = document.getElementById('jenisKendaraan').value;
             const now = new Date();
@@ -675,7 +669,7 @@
         }
 
         function render() {
-            let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + (Number(curr.biaya) || 0), 0);
+            let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + curr.biaya, 0);
             let elJml = document.getElementById('jumlahMasuk');
             let elTotal = document.getElementById('totalPendapatan');
             if(elJml) elJml.innerText = dataMasuk.length + " Unit";
@@ -795,7 +789,7 @@
         }
 
         function bukaModalKeluar(id) {
-            let d = dataMasuk.find(x => x.id == id);
+            let d = dataMasuk.find(x => x.id === id);
             selectedKeluarId = id;
             document.getElementById('detailKeluar').innerHTML = `<b>Plat:</b> ${d.plat}<br><b>Pos Asal:</b> ${d.posAsal}<br><b>Biaya:</b> Rp ${d.biaya.toLocaleString('id-ID')}`;
             document.getElementById('modalKeluar').classList.remove('hidden');
@@ -807,7 +801,7 @@
         }
 
         function konfirmasiKeluar() {
-            let d = dataMasuk.find(x => x.id == selectedKeluarId);
+            let d = dataMasuk.find(x => x.id === selectedKeluarId);
             let posKey = d.posAsal.toLowerCase().replace('pos ', 'parkir').trim();
             if (d.posAsal === 'Super Admin') posKey = 'superadmin';
             
