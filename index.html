@@ -316,7 +316,7 @@
                 let val = snapshot.val();
                 
                 if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                    // FITUR UTAMA: Menyisir seluruh cabang folder di dalam parkir_data secara rekursif aman
+                    // FITUR UTAMA: Menyisir seluruh cabang folder di dalam parkir_data (parkir1, parkir2, parkir3, parkir4)
                     Object.keys(val).forEach(folderKey => {
                         let folderData = val[folderKey];
                         
@@ -324,9 +324,7 @@
                             Object.keys(folderData).forEach(idTransaksi => {
                                 let item = folderData[idTransaksi];
                                 
-                                // Cek apakah item transaksi valid atau objek bertingkat dalam
                                 if (item && typeof item === 'object') {
-                                    // Jika item ternyata masih berupa sub-kategori/object di dalamnya (antisipasi nested ganda)
                                     if (!item.plat && !item.nomor_plat && !item.waktu) {
                                         Object.keys(item).forEach(subId => {
                                             let subItem = item[subId];
