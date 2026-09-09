@@ -111,7 +111,7 @@
                     <button onclick="manualRefreshData()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 rounded-xl text-xs py-3 shadow transition flex items-center gap-1">🔄 <span id="txtRefresh">Refresh</span></button>
                 </div>
 
-                <!-- PANEL SUPER ADMIN (UBAH PASSWORD & RESET DATA) -->
+                <!-- PANEL SUPER ADMIN -->
                 <div id="panelSuperAdmin" class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-4 hidden">
                     <div class="space-y-3 border-b border-gray-700 pb-4">
                         <h2 class="text-xs font-bold text-purple-400 uppercase">👑 Pengaturan Password Pos</h2>
@@ -151,7 +151,7 @@
                 </div>
             </div>
 
-            <!-- HALAMAN 3: Parkir Keluar & Lampu Senter On/Off -->
+            <!-- HALAMAN 3: Parkir Keluar -->
             <div id="page3" class="space-y-4 hidden">
                 <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-3">
                     <div class="flex justify-between items-center">
@@ -191,7 +191,7 @@
         </div>
     </div>
 
-    <!-- MODAL PRATINJAU STRUK (RE-PRINT) -->
+    <!-- MODAL PRATINJAU STRUK -->
     <div id="modalPreviewStruk" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 w-full max-w-xs space-y-4">
             <div class="flex justify-between items-center border-b border-gray-700 pb-2">
@@ -263,7 +263,11 @@
             }
         });
 
+        // STRATEGI OFFLINE-FIRST: Muat dulu dari Cache Lokal HP, lalu sinkronkan Firebase
         function initRealtimeDataListener() {
+            // 1. Ambil instan dari localStorage HP agar tidak pakai loading sama sekali
+            loadDataFromLocalCache();
+
             if (activeListener) {
                 let oldPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
                 database.ref(oldPath).off('value', activeListener);
@@ -276,12 +280,27 @@
                 refPath = `parkir_data/${currentSesi}`;
             }
 
+            // 2. Tarik data dari Firebase di latar belakang
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 prosesDataSnapshot(snapshot);
+            }, (error) => {
+                console.log("Karingan loyo/offline, menggunakan cache lokal:", error);
             });
         }
 
-        // Fungsi Tombol Refresh Manual di Halaman 2
+        // Fungsi membaca cache lokal HP
+        function loadDataFromLocalCache() {
+            let cacheKey = `parkir_cache_data_${currentSesi}`;
+            let cachedData = localStorage.getItem(cacheKey);
+            if (cachedData) {
+                try {
+                    dataMasuk = JSON.parse(cachedData);
+                    render(); // Langsung render seketika tanpa nunggu internet
+                } catch(e) {}
+            }
+        }
+
+        // Tombol Refresh Manual
         function manualRefreshData() {
             let txt = document.getElementById('txtRefresh');
             if(txt) txt.innerText = "Memuat...";
@@ -290,10 +309,12 @@
             
             database.ref(refPath).once('value').then((snapshot) => {
                 prosesDataSnapshot(snapshot);
-                showToast("Data berhasil diperbarui!");
+                showToast("Data diperbarui dari server!");
                 if(txt) txt.innerText = "Refresh";
             }).catch((err) => {
-                alert("Gagal memuat data: " + err.message);
+                // Jika internet mati saat direfresh, fallback ke data lokal
+                loadDataFromLocalCache();
+                showToast("Internet loyo, memuat data lokal!");
                 if(txt) txt.innerText = "Refresh";
             });
         }
@@ -320,6 +341,11 @@
             }
             gabungan.sort((a, b) => b.id - a.id);
             dataMasuk = gabungan;
+
+            // Simpan otomatis ke localStorage HP sebagai cache offline
+            let cacheKey = `parkir_cache_data_${currentSesi}`;
+            localStorage.setItem(cacheKey, JSON.stringify(dataMasuk));
+
             render();
         }
 
@@ -561,9 +587,12 @@
 
             platInput.value = '';
             showToast(`Tersimpan: ${plat}`);
-
             currentPreviewData = item;
             
+            // Masukkan data lokal duluan secara instan agar UI responsif
+            dataMasuk.unshift(item);
+            render();
+
             database.ref(`parkir_data/${targetPos}/${id}`).set(item)
                 .catch(e => alert("Gagal menyimpan ke server: " + e.message));
         }
@@ -576,21 +605,18 @@
                 .catch(err => alert("Gagal menghapus dari server: " + err.message));
         }
 
-        // FUNGSI RESET TOTAL: Menghapus data Firebase DAN membersihkan seluruh cache lokal browser
         function resetSemuaData() {
             if (currentSesi !== 'superadmin') {
                 return alert("Akses ditolak! Fitur ini khusus Super Admin.");
             }
             if (!confirm("PERINGATAN: Semua data riwayat parkir dan seluruh cache lokal browser akan dihapus permanen! Lanjutkan?")) return;
 
-            // Hapus data dari database Firebase
             let promises = ['parkir1', 'parkir2', 'parkir3', 'parkir4'].map(pos => {
                 return database.ref(`parkir_data/${pos}`).remove();
             });
 
             Promise.all(promises)
                 .then(() => {
-                    // Membersihkan total penyimpanan local storage HP
                     localStorage.clear();
                     showToast("Semua data & cache berhasil dibersihkan!");
                     setTimeout(() => location.reload(), 1000);
