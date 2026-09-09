@@ -252,18 +252,6 @@
         let mediaStream = null;
         const tarif = { "Motor": 10000, "Mobil": 25000 };
 
-        setTimeout(() => {
-            if (dataMasuk.length === 0) {
-                let backup = localStorage.getItem(`backup_parkir_${currentSesi || 'superadmin'}`);
-                if (backup) {
-                    dataMasuk = JSON.parse(backup);
-                    render();
-                } else {
-                    document.getElementById('listMasuk').innerHTML = `<p class="text-sm text-gray-500 italic text-center py-4 bg-gray-800 rounded-xl border border-gray-700">Belum ada data di memori HP.</p>`;
-                }
-            }
-        }, 3000);
-
         database.ref('settings/passwords').on('value', (snapshot) => {
             if (snapshot.exists()) {
                 let val = snapshot.val();
@@ -272,23 +260,25 @@
                     localStorage.setItem('parkir_db_passwords', JSON.stringify(dbPasswords));
                 }
             }
-        }, (error) => {
-            console.warn("Offline mode:", error);
         });
 
         function initRealtimeDataListener() {
             if (activeListener) database.ref().off('value', activeListener);
             
-            // PERBAIKAN UTAMA: Tentukan path database berdasarkan sesi yang login
-            // Pos 1-4 hanya memantau posnya sendiri. Super Admin & Pos Keluar memantau seluruh folder parkir_data.
-            let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
+            // KUNCI UTAMA: Tentukan jalur database secara ketat berdasarkan pos login
+            let refPath;
+            if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
+                refPath = 'parkir_data'; // Mengambil seluruh folder pos 1-4
+            } else {
+                refPath = `parkir_data/${currentSesi}`; // Hanya mengambil pos yang sedang aktif (misal: parkir1 saja)
+            }
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 let gabungan = [];
                 if (snapshot.exists()) {
                     let val = snapshot.val();
                     if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                        // Gabungkan data dari semua pos
+                        // Gabungkan data dari semua pos untuk Superadmin / Pos Keluar
                         Object.keys(val).forEach(posKey => {
                             if (val[posKey] && typeof val[posKey] === 'object') {
                                 Object.values(val[posKey]).forEach(item => {
@@ -297,7 +287,7 @@
                             }
                         });
                     } else {
-                        // Ambil khusus data pos yang sedang aktif login saja
+                        // Ambil data milik pos spesifik ini saja tanpa tercampur pos lain
                         if (val && typeof val === 'object') {
                             Object.values(val).forEach(item => {
                                 if (item && typeof item === 'object') gabungan.push(item);
@@ -307,10 +297,6 @@
                 }
                 gabungan.sort((a, b) => b.id - a.id);
                 dataMasuk = gabungan;
-                
-                if (currentSesi) {
-                    localStorage.setItem(`backup_parkir_${currentSesi}`, JSON.stringify(dataMasuk));
-                }
                 render();
             });
         }
@@ -534,12 +520,13 @@
             const plat = platInput.value.trim().toUpperCase();
             if (!plat) return alert("Nomor plat tidak boleh kosong!");
 
+            // Jika Super Admin mencoba input, arahkan ke parkir1 sebagai default pos input
+            let targetPos = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir1' : currentSesi;
+            if (!targetPos) return alert("Sesi pos tidak valid!");
+
             const jenis = document.getElementById('jenisKendaraan').value;
             const now = new Date();
             const id = Date.now();
-            
-            // Jika login sebagai superadmin, input baru diarahkan ke parkir1 agar tidak error
-            let targetPos = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir1' : currentSesi;
 
             const item = {
                 id: id,
@@ -551,13 +538,14 @@
                 posAsal: targetPos.toUpperCase().replace('PARKIR', 'Pos ')
             };
 
-            dataMasuk.unshift(item);
-            render();
             platInput.value = '';
             showToast(`Tersimpan: ${plat}`);
 
             currentPreviewData = item;
-            database.ref(`parkir_data/${targetPos}/${id}`).set(item).catch(e => console.error(e));
+            
+            // Simpan langsung ke database Firebase pada pos yang bersangkutan
+            database.ref(`parkir_data/${targetPos}/${id}`).set(item)
+                .catch(e => alert("Gagal menyimpan ke server: " + e.message));
         }
 
         function hapusTransaksi(id, posAsalText) {
@@ -565,9 +553,6 @@
             
             let posKey = posAsalText.toLowerCase().replace('pos ', 'parkir').trim();
             
-            dataMasuk = dataMasuk.filter(x => x.id !== id);
-            render();
-
             database.ref(`parkir_data/${posKey}/${id}`).remove()
                 .then(() => showToast("Transaksi berhasil dihapus!"))
                 .catch(err => alert("Gagal menghapus dari server: " + err.message));
@@ -578,9 +563,6 @@
                 return alert("Akses ditolak! Fitur ini khusus Super Admin.");
             }
             if (!confirm("PERINGATAN: Semua data riwayat parkir dari seluruh pos akan dihapus permanen! Lanjutkan?")) return;
-
-            dataMasuk = [];
-            render();
 
             let promises = ['parkir1', 'parkir2', 'parkir3', 'parkir4'].map(pos => {
                 return database.ref(`parkir_data/${pos}`).remove();
@@ -596,10 +578,6 @@
         }
 
         function render() {
-            if(currentSesi) {
-                localStorage.setItem(`backup_parkir_${currentSesi}`, JSON.stringify(dataMasuk));
-            }
-
             let totalPendapatan = dataMasuk.reduce((acc, curr) => acc + curr.biaya, 0);
             let elJml = document.getElementById('jumlahMasuk');
             let elTotal = document.getElementById('totalPendapatan');
@@ -736,8 +714,6 @@
         function konfirmasiKeluar() {
             let d = dataMasuk.find(x => x.id === selectedKeluarId);
             let posKey = d.posAsal.toLowerCase().replace('pos ', 'parkir').trim();
-            d.status = 'Keluar'; 
-            render();
             database.ref(`parkir_data/${posKey}/${selectedKeluarId}/status`).set('Keluar');
             closeModalKeluar();
             showToast("Kendaraan Keluar Berhasil Dicatat!");
