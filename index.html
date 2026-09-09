@@ -264,7 +264,7 @@
         });
 
         // ==========================================
-        // UNIVERSAL PARSER LISTENER (100% TEMBUS SEGALA STRUKTUR)
+        // LISTENER & EXPLICIT PARSER POS 1-4
         // ==========================================
         function initRealtimeDataListener() {
             loadDataFromLocalCache();
@@ -315,32 +315,46 @@
             if (snapshot.exists()) {
                 let val = snapshot.val();
                 
-                // Universal Recursive Parser: Membaca struktur flat maupun nested pos berapapun bentuknya
-                function parseNode(node, defaultPos = 'POS 1') {
-                    if (!node || typeof node !== 'object') return;
+                if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
+                    let daftarPos = ['parkir1', 'parkir2', 'parkir3', 'parkir4'];
                     
-                    if (node.id || node.plat || node.nomor_plat) {
-                        gabungan.push({
-                            id: node.id || Date.now(),
-                            plat: node.plat || node.nomor_plat || '-',
-                            jenis: node.jenis || 'Motor',
-                            waktu: node.waktu || node.waktu_masuk || '-',
-                            biaya: node.biaya || 0,
-                            status: node.status || 'Di Dalam',
-                            posAsal: node.posAsal || defaultPos
-                        });
-                        return;
-                    }
-                    
-                    for (let key in node) {
-                        if (node.hasOwnProperty(key)) {
-                            let subPosName = key.toUpperCase().includes('PARKIR') ? key.toUpperCase().replace('PARKIR', 'Pos ') : defaultPos;
-                            parseNode(node[key], subPosName);
+                    daftarPos.forEach(posKey => {
+                        if (val[posKey] && typeof val[posKey] === 'object') {
+                            let posData = val[posKey];
+                            let namaPosDisplay = 'Pos ' + posKey.replace('parkir', '');
+                            
+                            Object.keys(posData).forEach(idTransaksi => {
+                                let item = posData[idTransaksi];
+                                if (item && typeof item === 'object') {
+                                    gabungan.push({
+                                        id: item.id || idTransaksi,
+                                        plat: item.plat || item.nomor_plat || '-',
+                                        jenis: item.jenis || 'Motor',
+                                        waktu: item.waktu || item.waktu_masuk || '-',
+                                        biaya: item.biaya || 0,
+                                        status: item.status || 'Di Dalam',
+                                        posAsal: item.posAsal || namaPosDisplay
+                                    });
+                                }
+                            });
                         }
-                    }
+                    });
+                } else {
+                    Object.keys(val).forEach(idTransaksi => {
+                        let item = val[idTransaksi];
+                        if (item && typeof item === 'object') {
+                            gabungan.push({
+                                id: item.id || idTransaksi,
+                                plat: item.plat || item.nomor_plat || '-',
+                                jenis: item.jenis || 'Motor',
+                                waktu: item.waktu || item.waktu_masuk || '-',
+                                biaya: item.biaya || 0,
+                                status: item.status || 'Di Dalam',
+                                posAsal: item.posAsal || `Pos ${currentSesi.replace('parkir', '')}`
+                            });
+                        }
+                    });
                 }
-                
-                parseNode(val, currentSesi ? currentSesi.toUpperCase().replace('PARKIR', 'Pos ') : 'POS 1');
             }
             
             let uniqueMap = new Map();
