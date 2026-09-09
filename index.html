@@ -278,8 +278,6 @@
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             // 2. SINKRONISASI DI BACKGROUND: Mendengarkan perubahan data dari server Firebase secara live.
-            // Saat internet stabil, data di layar & cache otomatis di-update dengan data valid dari server.
-            // Saat internet loyo/mati, aplikasi tidak nge-lag dan tetap lancar pakai data lokal.
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 prosesDataSnapshot(snapshot);
             }, (error) => {
@@ -287,19 +285,17 @@
             });
         }
 
-        // Fungsi membaca data dari memori lokal HP (LocalStorage)
         function loadDataFromLocalCache() {
             let cacheKey = `parkir_cache_data_${currentSesi}`;
             let cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
                 try {
                     dataMasuk = JSON.parse(cachedData);
-                    render(); // Langsung render ke layar detik itu juga
+                    render();
                 } catch(e) {}
             }
         }
 
-        // Tombol Refresh Manual untuk memaksa tarik data terbaru dari server
         function manualRefreshData() {
             let txt = document.getElementById('txtRefresh');
             if(txt) txt.innerText = "Memuat...";
@@ -321,13 +317,25 @@
             if (snapshot.exists()) {
                 let val = snapshot.val();
                 if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                    Object.keys(val).forEach(posKey => {
+                    // Gabungkan semua pos secara eksplisit
+                    let posList = ['parkir1', 'parkir2', 'parkir3', 'parkir4'];
+                    posList.forEach(posKey => {
                         if (val[posKey] && typeof val[posKey] === 'object') {
                             Object.values(val[posKey]).forEach(item => {
-                                if (item && typeof item === 'object') gabungan.push(item);
+                                if (item && typeof item === 'object') {
+                                    gabungan.push(item);
+                                }
                             });
                         }
                     });
+                    // Fallback jika data tersimpan rata tanpa sub-folder pos
+                    if (gabungan.length === 0) {
+                        Object.values(val).forEach(item => {
+                            if (item && typeof item === 'object' && item.id) {
+                                gabungan.push(item);
+                            }
+                        });
+                    }
                 } else {
                     if (val && typeof val === 'object') {
                         Object.values(val).forEach(item => {
@@ -339,7 +347,6 @@
             gabungan.sort((a, b) => b.id - a.id);
             dataMasuk = gabungan;
 
-            // Simpan otomatis ke cache lokal setiap kali ada data valid baru dari Firebase
             let cacheKey = `parkir_cache_data_${currentSesi}`;
             localStorage.setItem(cacheKey, JSON.stringify(dataMasuk));
 
@@ -432,7 +439,6 @@
             if (p === 3) setTimeout(mulaiScan, 300);
         }
 
-        // --- BLUETOOTH PRINTER ---
         async function connectBluetooth() {
             try {
                 document.getElementById('statusPrinter').innerText = "Mencari...";
@@ -586,11 +592,9 @@
             showToast(`Tersimpan: ${plat}`);
             currentPreviewData = item;
             
-            // Masukkan ke data lokal & render seketika agar responsif
             dataMasuk.unshift(item);
             render();
 
-            // Kirim ke server Firebase (Acuan Utama)
             database.ref(`parkir_data/${targetPos}/${id}`).set(item)
                 .catch(e => alert("Gagal menyimpan ke server: " + e.message));
         }
@@ -758,7 +762,6 @@
             let d = dataMasuk.find(x => x.id === selectedKeluarId);
             let posKey = d.posAsal.toLowerCase().replace('pos ', 'parkir').trim();
             
-            // Update ke server Firebase (Acuan Utama)
             database.ref(`parkir_data/${posKey}/${selectedKeluarId}/status`).set('Keluar');
             
             closeModalKeluar();
