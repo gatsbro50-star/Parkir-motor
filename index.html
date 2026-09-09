@@ -264,7 +264,7 @@
         });
 
         // ==========================================
-        // SISTEM LISTENER & MULTI-POS SUPER ADMIN (PASTI DETEK)
+        // UNIVERSAL PARSER LISTENER (100% TEMBUS SEGALA STRUKTUR)
         // ==========================================
         function initRealtimeDataListener() {
             loadDataFromLocalCache();
@@ -273,13 +273,12 @@
                 database.ref('parkir_data').off('value', activeListener);
             }
             
-            // Tentukan jalur path database berdasarkan sesi yang aktif
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 prosesDataSnapshot(snapshot);
             }, (error) => {
-                console.log("Mode offline aktif, memuat cache lokal:", error);
+                console.log("Mode offline aktif:", error);
             });
         }
 
@@ -302,10 +301,10 @@
             
             database.ref(refPath).once('value').then((snapshot) => {
                 prosesDataSnapshot(snapshot);
-                showToast("Data dari seluruh pos berhasil disinkronkan!");
+                showToast("Data berhasil disinkronkan!");
                 if(txt) txt.innerText = "Refresh";
             }).catch((err) => {
-                showToast("Gagal terhubung ke server, menggunakan data lokal.");
+                showToast("Gagal terhubung ke server.");
                 if(txt) txt.innerText = "Refresh";
             });
         }
@@ -316,47 +315,34 @@
             if (snapshot.exists()) {
                 let val = snapshot.val();
                 
-                if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                    // Loop eksplisit menyapu pos parkir1, parkir2, parkir3, parkir4
-                    for (let posKey in val) {
-                        let posData = val[posKey];
-                        if (posData && typeof posData === 'object') {
-                            for (let idKey in posData) {
-                                let item = posData[idKey];
-                                if (item && typeof item === 'object') {
-                                    gabungan.push({
-                                        id: item.id || idKey,
-                                        plat: item.plat || item.nomor_plat || '-',
-                                        jenis: item.jenis || 'Motor',
-                                        waktu: item.waktu || item.waktu_masuk || '-',
-                                        biaya: item.biaya || 0,
-                                        status: item.status || 'Di Dalam',
-                                        posAsal: item.posAsal || posKey.toUpperCase().replace('PARKIR', 'Pos ')
-                                    });
-                                }
-                            }
-                        }
+                // Universal Recursive Parser: Membaca struktur flat maupun nested pos berapapun bentuknya
+                function parseNode(node, defaultPos = 'POS 1') {
+                    if (!node || typeof node !== 'object') return;
+                    
+                    if (node.id || node.plat || node.nomor_plat) {
+                        gabungan.push({
+                            id: node.id || Date.now(),
+                            plat: node.plat || node.nomor_plat || '-',
+                            jenis: node.jenis || 'Motor',
+                            waktu: node.waktu || node.waktu_masuk || '-',
+                            biaya: node.biaya || 0,
+                            status: node.status || 'Di Dalam',
+                            posAsal: node.posAsal || defaultPos
+                        });
+                        return;
                     }
-                } else {
-                    // Pos spesifik (parkir1 / parkir2 / dll)
-                    for (let idKey in val) {
-                        let item = val[idKey];
-                        if (item && typeof item === 'object') {
-                            gabungan.push({
-                                id: item.id || idKey,
-                                plat: item.plat || item.nomor_plat || '-',
-                                jenis: item.jenis || 'Motor',
-                                waktu: item.waktu || item.waktu_masuk || '-',
-                                biaya: item.biaya || 0,
-                                status: item.status || 'Di Dalam',
-                                posAsal: item.posAsal || currentSesi.toUpperCase().replace('PARKIR', 'Pos ')
-                            });
+                    
+                    for (let key in node) {
+                        if (node.hasOwnProperty(key)) {
+                            let subPosName = key.toUpperCase().includes('PARKIR') ? key.toUpperCase().replace('PARKIR', 'Pos ') : defaultPos;
+                            parseNode(node[key], subPosName);
                         }
                     }
                 }
+                
+                parseNode(val, currentSesi ? currentSesi.toUpperCase().replace('PARKIR', 'Pos ') : 'POS 1');
             }
             
-            // Hapus duplikasi berdasarkan ID unik
             let uniqueMap = new Map();
             gabungan.forEach(item => {
                 if (item && item.id) uniqueMap.set(item.id, item);
@@ -366,7 +352,6 @@
             gabungan.sort((a, b) => b.id - a.id);
             dataMasuk = gabungan;
 
-            // Simpan ke cache lokal
             let cacheKey = `parkir_cache_data_${currentSesi}`;
             localStorage.setItem(cacheKey, JSON.stringify(dataMasuk));
 
