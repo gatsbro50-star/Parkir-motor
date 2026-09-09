@@ -107,7 +107,8 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <button onclick="exportToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-3 shadow transition">📥 Export Excel</button>
+                    <button onclick="exportToExcel()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs py-3 shadow transition">📥 Export Excel</button>
+                    <button onclick="manualRefreshData()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 rounded-xl text-xs py-3 shadow transition flex items-center gap-1">🔄 <span id="txtRefresh">Refresh</span></button>
                 </div>
 
                 <!-- PANEL SUPER ADMIN (UBAH PASSWORD & RESET DATA) -->
@@ -137,7 +138,7 @@
                     <div class="space-y-2">
                         <h2 class="text-xs font-bold text-red-400 uppercase">⚠️ Zona Bahaya / Reset Sistem</h2>
                         <button type="button" onclick="resetSemuaData()" class="w-full bg-red-600 hover:bg-red-500 py-3 rounded-xl text-xs font-bold text-white shadow active:scale-95 transition flex items-center justify-center gap-1">
-                            <span>🗑️</span> Reset Semua Data Parkir
+                            <span>🗑️</span> Reset Semua Data Parkir & Cache
                         </button>
                     </div>
                 </div>
@@ -263,42 +264,63 @@
         });
 
         function initRealtimeDataListener() {
-            if (activeListener) database.ref().off('value', activeListener);
+            if (activeListener) {
+                let oldPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
+                database.ref(oldPath).off('value', activeListener);
+            }
             
-            // KUNCI UTAMA: Tentukan jalur database secara ketat berdasarkan pos login
             let refPath;
             if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                refPath = 'parkir_data'; // Mengambil seluruh folder pos 1-4
+                refPath = 'parkir_data';
             } else {
-                refPath = `parkir_data/${currentSesi}`; // Hanya mengambil pos yang sedang aktif (misal: parkir1 saja)
+                refPath = `parkir_data/${currentSesi}`;
             }
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
-                let gabungan = [];
-                if (snapshot.exists()) {
-                    let val = snapshot.val();
-                    if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                        // Gabungkan data dari semua pos untuk Superadmin / Pos Keluar
-                        Object.keys(val).forEach(posKey => {
-                            if (val[posKey] && typeof val[posKey] === 'object') {
-                                Object.values(val[posKey]).forEach(item => {
-                                    if (item && typeof item === 'object') gabungan.push(item);
-                                });
-                            }
-                        });
-                    } else {
-                        // Ambil data milik pos spesifik ini saja tanpa tercampur pos lain
-                        if (val && typeof val === 'object') {
-                            Object.values(val).forEach(item => {
+                prosesDataSnapshot(snapshot);
+            });
+        }
+
+        // Fungsi Tombol Refresh Manual di Halaman 2
+        function manualRefreshData() {
+            let txt = document.getElementById('txtRefresh');
+            if(txt) txt.innerText = "Memuat...";
+            
+            let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
+            
+            database.ref(refPath).once('value').then((snapshot) => {
+                prosesDataSnapshot(snapshot);
+                showToast("Data berhasil diperbarui!");
+                if(txt) txt.innerText = "Refresh";
+            }).catch((err) => {
+                alert("Gagal memuat data: " + err.message);
+                if(txt) txt.innerText = "Refresh";
+            });
+        }
+
+        function prosesDataSnapshot(snapshot) {
+            let gabungan = [];
+            if (snapshot.exists()) {
+                let val = snapshot.val();
+                if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
+                    Object.keys(val).forEach(posKey => {
+                        if (val[posKey] && typeof val[posKey] === 'object') {
+                            Object.values(val[posKey]).forEach(item => {
                                 if (item && typeof item === 'object') gabungan.push(item);
                             });
                         }
+                    });
+                } else {
+                    if (val && typeof val === 'object') {
+                        Object.values(val).forEach(item => {
+                            if (item && typeof item === 'object') gabungan.push(item);
+                        });
                     }
                 }
-                gabungan.sort((a, b) => b.id - a.id);
-                dataMasuk = gabungan;
-                render();
-            });
+            }
+            gabungan.sort((a, b) => b.id - a.id);
+            dataMasuk = gabungan;
+            render();
         }
 
         window.onload = function() {
@@ -520,7 +542,6 @@
             const plat = platInput.value.trim().toUpperCase();
             if (!plat) return alert("Nomor plat tidak boleh kosong!");
 
-            // Jika Super Admin mencoba input, arahkan ke parkir1 sebagai default pos input
             let targetPos = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir1' : currentSesi;
             if (!targetPos) return alert("Sesi pos tidak valid!");
 
@@ -543,35 +564,35 @@
 
             currentPreviewData = item;
             
-            // Simpan langsung ke database Firebase pada pos yang bersangkutan
             database.ref(`parkir_data/${targetPos}/${id}`).set(item)
                 .catch(e => alert("Gagal menyimpan ke server: " + e.message));
         }
 
         function hapusTransaksi(id, posAsalText) {
             if (!confirm("Yakin ingin menghapus data transaksi ini?")) return;
-            
             let posKey = posAsalText.toLowerCase().replace('pos ', 'parkir').trim();
-            
             database.ref(`parkir_data/${posKey}/${id}`).remove()
                 .then(() => showToast("Transaksi berhasil dihapus!"))
                 .catch(err => alert("Gagal menghapus dari server: " + err.message));
         }
 
+        // FUNGSI RESET TOTAL: Menghapus data Firebase DAN membersihkan seluruh cache lokal browser
         function resetSemuaData() {
             if (currentSesi !== 'superadmin') {
                 return alert("Akses ditolak! Fitur ini khusus Super Admin.");
             }
-            if (!confirm("PERINGATAN: Semua data riwayat parkir dari seluruh pos akan dihapus permanen! Lanjutkan?")) return;
+            if (!confirm("PERINGATAN: Semua data riwayat parkir dan seluruh cache lokal browser akan dihapus permanen! Lanjutkan?")) return;
 
+            // Hapus data dari database Firebase
             let promises = ['parkir1', 'parkir2', 'parkir3', 'parkir4'].map(pos => {
                 return database.ref(`parkir_data/${pos}`).remove();
             });
 
             Promise.all(promises)
                 .then(() => {
+                    // Membersihkan total penyimpanan local storage HP
                     localStorage.clear();
-                    showToast("Semua data parkir berhasil di-reset!");
+                    showToast("Semua data & cache berhasil dibersihkan!");
                     setTimeout(() => location.reload(), 1000);
                 })
                 .catch(err => alert("Gagal mereset database: " + err.message));
@@ -619,9 +640,7 @@
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(stream => {
-                    mediaStream = stream;
-                })
+                .then(stream => { mediaStream = stream; })
                 .catch(err => console.log("Gagal ambil stream torch:", err));
 
             html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (decodedText) => {
