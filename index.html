@@ -243,7 +243,6 @@
             "superadmin": "123"
         };
 
-        // Sinkronisasi password lokal & server
         let localPass = localStorage.getItem('parkir_db_passwords');
         if (localPass) {
             try { dbPasswords = JSON.parse(localPass); } catch(e){}
@@ -268,9 +267,6 @@
         let mediaStream = null;
         const tarif = { "Motor": 10000, "Mobil": 25000 };
 
-        // ==========================================
-        // SISTEM LOCAL-FIRST & REALTIME SYNC (REVISI BUG SUPERADMIN)
-        // ==========================================
         function initRealtimeDataListener() {
             if (!currentSesi) return;
 
@@ -279,7 +275,7 @@
             if (cachedData) {
                 try {
                     dataMasuk = JSON.parse(cachedData);
-                    render(); // Render cache instan
+                    render();
                 } catch(e) {}
             }
 
@@ -288,7 +284,7 @@
                 database.ref(oldRefPath).off('value', activeListener);
             }
             
-            // Jika Super Admin atau Pos Keluar, panggil root database. Jika pos, panggil foldernya sendiri.
+            // Mengarahkan path listener ke root `parkir_data` jika Super Admin atau Pos Keluar
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
             activeListener = database.ref(refPath).on('value', (snapshot) => {
@@ -321,16 +317,18 @@
                 let val = snapshot.val();
                 
                 if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                    // PERBAIKAN: Baca semua folder secara dinamis (parkir1, parkir2, superadmin, dll)
+                    // MEMBACA SEMUA FOLDER POS SECARA DINAMIS (parkir1, parkir2, parkir3, parkir4, superadmin)
                     Object.keys(val).forEach(folderKey => {
                         let folderData = val[folderKey];
                         
-                        // Pastikan tipe data valid dan bukan string/angka nyasar
                         if (typeof folderData === 'object' && folderData !== null) {
                             Object.keys(folderData).forEach(idTransaksi => {
                                 let item = folderData[idTransaksi];
                                 
                                 if (item && typeof item === 'object') {
+                                    let labelPos = folderKey.includes('parkir') ? `Pos ${folderKey.replace('parkir', '')}` : 
+                                                   folderKey === 'superadmin' ? 'Super Admin' : folderKey;
+
                                     gabungan.push({
                                         id: item.id || idTransaksi,
                                         plat: item.plat || item.nomor_plat || '-',
@@ -338,14 +336,14 @@
                                         waktu: item.waktu || item.waktu_masuk || '-',
                                         biaya: item.biaya || 0,
                                         status: item.status || 'Di Dalam',
-                                        posAsal: item.posAsal || (folderKey.includes('parkir') ? `Pos ${folderKey.replace('parkir', '')}` : 'Super Admin')
+                                        posAsal: item.posAsal || labelPos
                                     });
                                 }
                             });
                         }
                     });
                 } else {
-                    // Pos mandiri hanya baca isi jalurnya sendiri
+                    // Pos mandiri hanya baca isi folder posnya sendiri
                     Object.keys(val).forEach(idTransaksi => {
                         let item = val[idTransaksi];
                         if (item && typeof item === 'object') {
@@ -372,7 +370,6 @@
             gabungan.sort((a, b) => b.id - a.id);
             dataMasuk = gabungan;
 
-            // Simpan cache lokal
             let cacheKey = `parkir_cache_data_${currentSesi}`;
             localStorage.setItem(cacheKey, JSON.stringify(dataMasuk));
 
@@ -612,9 +609,7 @@
             const plat = platInput.value.trim().toUpperCase();
             if (!plat) return alert("Nomor plat tidak boleh kosong!");
 
-            // PERBAIKAN: Super Admin menyimpan datanya sendiri, tidak dilempar ke Pos 1
             let targetPos = currentSesi; 
-            
             let namaPosLabel = currentSesi.includes('parkir') ? 'Pos ' + currentSesi.replace('parkir', '') : 
                                currentSesi === 'superadmin' ? 'Super Admin' : 'Pos Keluar';
 
@@ -646,7 +641,6 @@
         function hapusTransaksi(id, posAsalText) {
             if (!confirm("Yakin ingin menghapus data transaksi ini?")) return;
             
-            // Perbaikan jalur hapus untuk super admin
             let posKey = posAsalText.toLowerCase().replace('pos ', 'parkir').trim();
             if (posAsalText === 'Super Admin') posKey = 'superadmin';
 
@@ -661,7 +655,6 @@
             }
             if (!confirm("PERINGATAN: Semua data riwayat parkir di Firebase & cache lokal akan dihapus permanen! Lanjutkan?")) return;
 
-            // Bersihkan folder parkir1 sampai 4 DAN folder superadmin
             let promises = ['parkir1', 'parkir2', 'parkir3', 'parkir4', 'superadmin'].map(pos => {
                 return database.ref(`parkir_data/${pos}`).remove();
             });
