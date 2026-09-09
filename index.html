@@ -267,7 +267,6 @@
         // ARSITEKTUR OFFLINE-FIRST (INSTAN & VALID DARI FIREBASE)
         // ==========================================
         function initRealtimeDataListener() {
-            // 1. TAMPILKAN SEKETIKA: Ambil dari memori HP dulu agar 0 detik tanpa jeda
             loadDataFromLocalCache();
 
             if (activeListener) {
@@ -277,7 +276,6 @@
             
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
-            // 2. SINKRONISASI DI BACKGROUND: Mendengarkan perubahan data dari server Firebase secara live.
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 prosesDataSnapshot(snapshot);
             }, (error) => {
@@ -316,34 +314,51 @@
             let gabungan = [];
             if (snapshot.exists()) {
                 let val = snapshot.val();
-                if (currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
-                    // Gabungkan semua pos secara eksplisit
-                    let posList = ['parkir1', 'parkir2', 'parkir3', 'parkir4'];
-                    posList.forEach(posKey => {
-                        if (val[posKey] && typeof val[posKey] === 'object') {
-                            Object.values(val[posKey]).forEach(item => {
-                                if (item && typeof item === 'object') {
-                                    gabungan.push(item);
+                if (val && typeof val === 'object') {
+                    let keys = Object.keys(val);
+                    let isNested = keys.some(k => k.startsWith('parkir') || (val[k] && typeof val[k] === 'object' && !val[k].id && !val[k].plat));
+
+                    if (isNested || currentSesi === 'superadmin' || currentSesi === 'poskeluar') {
+                        keys.forEach(k => {
+                            let subVal = val[k];
+                            if (subVal && typeof subVal === 'object') {
+                                if (subVal.id && subVal.plat) {
+                                    gabungan.push(subVal);
+                                } else {
+                                    Object.values(subVal).forEach(item => {
+                                        if (item && typeof item === 'object' && (item.id || item.plat)) {
+                                            gabungan.push(item);
+                                        }
+                                    });
                                 }
-                            });
-                        }
-                    });
-                    // Fallback jika data tersimpan rata tanpa sub-folder pos
-                    if (gabungan.length === 0) {
-                        Object.values(val).forEach(item => {
-                            if (item && typeof item === 'object' && item.id) {
-                                gabungan.push(item);
                             }
                         });
                     }
-                } else {
-                    if (val && typeof val === 'object') {
+                    
+                    if (gabungan.length === 0) {
                         Object.values(val).forEach(item => {
-                            if (item && typeof item === 'object') gabungan.push(item);
+                            if (item && typeof item === 'object') {
+                                if (item.id || item.plat) {
+                                    gabungan.push(item);
+                                } else {
+                                    Object.values(item).forEach(subItem => {
+                                        if (subItem && typeof subItem === 'object' && (subItem.id || subItem.plat)) {
+                                            gabungan.push(subItem);
+                                        }
+                                    });
+                                }
+                            }
                         });
                     }
                 }
             }
+            
+            let uniqueMap = new Map();
+            gabungan.forEach(item => {
+                if (item && item.id) uniqueMap.set(item.id, item);
+            });
+            
+            gabungan = Array.from(uniqueMap.values());
             gabungan.sort((a, b) => b.id - a.id);
             dataMasuk = gabungan;
 
