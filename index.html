@@ -263,9 +263,11 @@
             }
         });
 
-        // STRATEGI OFFLINE-FIRST MURNI TANPA BLOKING KONEKSI SAAT LOAD AWAL
+        // ==========================================
+        // ARSITEKTUR OFFLINE-FIRST (INSTAN & VALID DARI FIREBASE)
+        // ==========================================
         function initRealtimeDataListener() {
-            // 1. Instan tampilkan data dari cache lokal HP (Bebas lemot / 0 detik)
+            // 1. TAMPILKAN SEKETIKA: Ambil dari memori HP dulu agar 0 detik tanpa jeda
             loadDataFromLocalCache();
 
             if (activeListener) {
@@ -275,34 +277,29 @@
             
             let refPath = (currentSesi === 'superadmin' || currentSesi === 'poskeluar') ? 'parkir_data' : `parkir_data/${currentSesi}`;
 
-            // 2. Tarik data dari Firebase secara asinkron di background (tidak menahan UI)
-            database.ref(refPath).once('value').then((snapshot) => {
-                prosesDataSnapshot(snapshot);
-            }).catch((error) => {
-                console.log("Internet loyo, tetap aman menggunakan cache lokal:", error);
-            });
-
-            // 3. Pasang listener realtime pasif untuk update otomatis jika ada data baru masuk/keluar
+            // 2. SINKRONISASI DI BACKGROUND: Mendengarkan perubahan data dari server Firebase secara live.
+            // Saat internet stabil, data di layar & cache otomatis di-update dengan data valid dari server.
+            // Saat internet loyo/mati, aplikasi tidak nge-lag dan tetap lancar pakai data lokal.
             activeListener = database.ref(refPath).on('value', (snapshot) => {
                 prosesDataSnapshot(snapshot);
             }, (error) => {
-                console.log("Background listener offline:", error);
+                console.log("Koneksi offline/loyo terdeteksi, menggunakan cache lokal:", error);
             });
         }
 
-        // Fungsi membaca cache lokal HP
+        // Fungsi membaca data dari memori lokal HP (LocalStorage)
         function loadDataFromLocalCache() {
             let cacheKey = `parkir_cache_data_${currentSesi}`;
             let cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
                 try {
                     dataMasuk = JSON.parse(cachedData);
-                    render(); // Langsung render seketika
+                    render(); // Langsung render ke layar detik itu juga
                 } catch(e) {}
             }
         }
 
-        // Tombol Refresh Manual
+        // Tombol Refresh Manual untuk memaksa tarik data terbaru dari server
         function manualRefreshData() {
             let txt = document.getElementById('txtRefresh');
             if(txt) txt.innerText = "Memuat...";
@@ -311,11 +308,10 @@
             
             database.ref(refPath).once('value').then((snapshot) => {
                 prosesDataSnapshot(snapshot);
-                showToast("Data diperbarui dari server!");
+                showToast("Data disinkronkan dari Firebase!");
                 if(txt) txt.innerText = "Refresh";
             }).catch((err) => {
-                loadDataFromLocalCache();
-                showToast("Internet loyo, memuat data lokal!");
+                showToast("Gagal terhubung ke server, menggunakan data lokal.");
                 if(txt) txt.innerText = "Refresh";
             });
         }
@@ -343,7 +339,7 @@
             gabungan.sort((a, b) => b.id - a.id);
             dataMasuk = gabungan;
 
-            // Simpan otomatis ke localStorage HP sebagai cache offline
+            // Simpan otomatis ke cache lokal setiap kali ada data valid baru dari Firebase
             let cacheKey = `parkir_cache_data_${currentSesi}`;
             localStorage.setItem(cacheKey, JSON.stringify(dataMasuk));
 
@@ -590,10 +586,11 @@
             showToast(`Tersimpan: ${plat}`);
             currentPreviewData = item;
             
-            // Masukkan data lokal duluan secara instan agar UI responsif
+            // Masukkan ke data lokal & render seketika agar responsif
             dataMasuk.unshift(item);
             render();
 
+            // Kirim ke server Firebase (Acuan Utama)
             database.ref(`parkir_data/${targetPos}/${id}`).set(item)
                 .catch(e => alert("Gagal menyimpan ke server: " + e.message));
         }
@@ -602,7 +599,7 @@
             if (!confirm("Yakin ingin menghapus data transaksi ini?")) return;
             let posKey = posAsalText.toLowerCase().replace('pos ', 'parkir').trim();
             database.ref(`parkir_data/${posKey}/${id}`).remove()
-                .then(() => showToast("Transaksi berhasil dihapus!"))
+                .then(() => showToast("Transaksi berhasil dihapus dari server!"))
                 .catch(err => alert("Gagal menghapus dari server: " + err.message));
         }
 
@@ -610,7 +607,7 @@
             if (currentSesi !== 'superadmin') {
                 return alert("Akses ditolak! Fitur ini khusus Super Admin.");
             }
-            if (!confirm("PERINGATAN: Semua data riwayat parkir dan seluruh cache lokal browser akan dihapus permanen! Lanjutkan?")) return;
+            if (!confirm("PERINGATAN: Semua data riwayat parkir di Firebase & cache lokal akan dihapus permanen! Lanjutkan?")) return;
 
             let promises = ['parkir1', 'parkir2', 'parkir3', 'parkir4'].map(pos => {
                 return database.ref(`parkir_data/${pos}`).remove();
@@ -760,9 +757,12 @@
         function konfirmasiKeluar() {
             let d = dataMasuk.find(x => x.id === selectedKeluarId);
             let posKey = d.posAsal.toLowerCase().replace('pos ', 'parkir').trim();
+            
+            // Update ke server Firebase (Acuan Utama)
             database.ref(`parkir_data/${posKey}/${selectedKeluarId}/status`).set('Keluar');
+            
             closeModalKeluar();
-            showToast("Kendaraan Keluar Berhasil Dicatat!");
+            showToast("Status Keluar Disimpan ke Server!");
             if(currentSesi === 'poskeluar') setTimeout(mulaiScan, 500);
         }
 
@@ -791,10 +791,10 @@
 
             database.ref(`settings/passwords/${targetPos}`).set(newPass)
                 .then(() => {
-                    showToast(`Password ${targetPos.toUpperCase()} Berhasil Diperbarui!`);
+                    showToast(`Password ${targetPos.toUpperCase()} Berhasil Diperbarui di Server!`);
                 })
                 .catch((err) => {
-                    showToast(`Password berhasil diubah lokal!`);
+                    showToast(`Password tersimpan lokal (Offline).`);
                 });
         }
 
